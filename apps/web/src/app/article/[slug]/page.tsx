@@ -13,14 +13,12 @@ import {
   slugToIri,
 } from "@dontopedia/sdk";
 import type { Statement } from "@donto/client";
+import { ArticleContextMenu } from "@/components/ArticleContextMenu";
 import { ArticleTabs } from "@/components/ArticleTabs";
 import { ArticleTimeline } from "@/components/ArticleTimeline";
 import { AssertFact } from "@/components/AssertFact";
-import { HoverToResearch } from "@/components/HoverToResearch";
-import { OpenDetailsButton } from "@/components/OpenDetailsButton";
 import { SearchForm } from "@/components/SearchForm";
 import { StartResearchCTA } from "@/components/StartResearchCTA";
-import { StatementActions } from "@/components/StatementActions";
 import { TopBar } from "@/components/TopBar";
 import css from "./page.module.css";
 
@@ -239,8 +237,8 @@ export default async function ArticlePage({
             </nav>
           )}
 
-          <HoverToResearch subjectIri={iri} subjectLabel={label}>
-            <div className={css.body}>
+          <ArticleContextMenu subjectIri={iri} subjectLabel={label}>
+            <div className={css.body} data-hint="right-click any text for actions">
               {groups.map((g) => (
                 <PredicateSection
                   key={g.predicate}
@@ -296,7 +294,7 @@ export default async function ArticlePage({
                 </div>
               </PredicateSection>
             </div>
-          </HoverToResearch>
+          </ArticleContextMenu>
         </div>
       </article>
     </main>
@@ -344,8 +342,17 @@ function ClaimLine({
   const obj = formatObject(stmt);
   const ref = refs.get(stmt.context);
   const kind = classifyContext(stmt.context);
+  // data-statement-id lets the article context menu know which claim the
+  // user right-clicked inside, so it can show per-claim actions (endorse,
+  // dispute, cite, open details) in addition to the always-available
+  // research actions.
   return (
-    <li className={css.claim} data-kind={kind} data-polarity={stmt.polarity}>
+    <li
+      className={css.claim}
+      data-statement-id={stmt.statement_id}
+      data-kind={kind}
+      data-polarity={stmt.polarity}
+    >
       <span className={css.claimObj}>
         {stmt.polarity === "negated" && <span className={css.neg}>not&nbsp;</span>}
         {stmt.object_iri ? (
@@ -367,10 +374,7 @@ function ClaimLine({
         {formatValidRange(stmt)}
         {" · "}
         <span title={stmt.context}>{prettifyContext(stmt.context)}</span>
-        {" · "}
-        <OpenDetailsButton statementId={stmt.statement_id} />
       </span>
-      <StatementActions statementId={stmt.statement_id} />
     </li>
   );
 }

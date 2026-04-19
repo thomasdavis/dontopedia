@@ -170,6 +170,34 @@
 
 .body {
   margin-top: var(--ddp-space-2);
+  position: relative;
+}
+
+/* Subtle hint at the bottom-right that the article body is interactive.
+ * Hidden on mobile (no right-click gesture). Only shows on hover to stay
+ * out of the Wikipedia reading flow. */
+.body::after {
+  content: attr(data-hint);
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.6875rem;
+  color: #72777d;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #eaecf0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ddp-duration-normal) var(--ddp-easing-standard);
+  z-index: 10;
+}
+.body:hover::after {
+  opacity: 1;
+}
+@media (hover: none) {
+  .body::after { display: none; }
 }
 
 .section {
