@@ -1,0 +1,251 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 10, 5, 0.38);
+  z-index: 1200;
+  animation: fadeIn 160ms var(--ddp-easing-standard);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(540px, 100vw);
+  background: var(--ddp-color-background);
+  border-left: 1px solid var(--ddp-color-outline);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  padding: var(--ddp-space-6);
+  animation: slideIn 220ms var(--ddp-easing-emphasized);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(32px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.close {
+  position: absolute;
+  top: var(--ddp-space-3);
+  right: var(--ddp-space-3);
+  background: transparent;
+  border: none;
+  color: var(--ddp-color-on-surface-variant);
+  font-size: 1.125rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.close:hover { background: var(--ddp-color-surface-container); }
+
+.loading,
+.error,
+.empty {
+  color: var(--ddp-color-on-surface-variant);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.875rem;
+  margin: 0;
+}
+.error { color: var(--ddp-color-error); }
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-6);
+}
+
+.head {
+  padding-bottom: var(--ddp-space-4);
+  border-bottom: 1px solid var(--ddp-color-outline-variant);
+}
+.ids {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.6875rem;
+  color: var(--ddp-color-on-surface-variant);
+}
+.idSmall {
+  background: var(--ddp-color-surface-container);
+  padding: 2px 6px;
+  border-radius: var(--ddp-radius-sm);
+}
+.stmt {
+  margin: var(--ddp-space-2) 0;
+  font-family: var(--ddp-font-serif);
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.stmt a {
+  color: var(--ddp-color-primary);
+  text-decoration: none;
+}
+.stmt a:hover { text-decoration: underline; }
+.pred {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ddp-color-on-surface-variant);
+  margin: 0 var(--ddp-space-1);
+}
+.obj {
+  color: var(--ddp-color-on-surface);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 4px var(--ddp-space-3);
+  margin: var(--ddp-space-3) 0 0 0;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.8125rem;
+}
+.meta dt {
+  color: var(--ddp-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.6875rem;
+  padding-top: 2px;
+}
+.meta dd {
+  margin: 0;
+  color: var(--ddp-color-on-surface);
+  display: flex;
+  gap: var(--ddp-space-2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.mono {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.75rem;
+  color: var(--ddp-color-on-surface-variant);
+}
+
+.ctxTag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--ddp-color-surface-container);
+  color: var(--ddp-color-on-surface);
+}
+.ctxTag[data-kind="source"] {
+  background: color-mix(in oklab, var(--ddp-color-accent-source) 18%, transparent);
+  color: var(--ddp-color-accent-source);
+}
+.ctxTag[data-kind="hypothesis"] {
+  background: color-mix(in oklab, var(--ddp-color-accent-hypothesis) 18%, transparent);
+  color: var(--ddp-color-accent-hypothesis);
+}
+.ctxTag[data-kind="derived"] {
+  background: color-mix(in oklab, var(--ddp-color-accent-derived) 18%, transparent);
+  color: var(--ddp-color-accent-derived);
+}
+
+.facet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-2);
+}
+.facet > h4 {
+  margin: 0;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ddp-color-primary);
+}
+.subLabel {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.75rem;
+  color: var(--ddp-color-on-surface-variant);
+  margin-top: var(--ddp-space-2);
+}
+
+.lineage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-2);
+}
+
+.sibs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sibling {
+  padding: 6px var(--ddp-space-2);
+  border: 1px solid var(--ddp-color-outline-variant);
+  border-radius: var(--ddp-radius-sm);
+  font-family: var(--ddp-font-serif);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  display: flex;
+  gap: var(--ddp-space-2);
+  align-items: baseline;
+  flex-wrap: wrap;
+  transition: background var(--ddp-duration-fast) var(--ddp-easing-standard);
+}
+.sibling:hover { background: var(--ddp-color-surface-container); }
+.sibling[data-polarity="negated"] .sibVal { text-decoration: line-through; color: var(--ddp-color-error); }
+.sibVal { color: var(--ddp-color-on-surface); }
+.sibCtx {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.6875rem;
+  color: var(--ddp-color-on-surface-variant);
+}
+.sibRetr {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ddp-color-error);
+  margin-left: auto;
+}
+
+.audit {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-1);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.75rem;
+}
+.audit li {
+  padding: 4px 8px;
+  border-left: 2px solid var(--ddp-color-outline-variant);
+  color: var(--ddp-color-on-surface);
+}
+.audit time { color: var(--ddp-color-on-surface-variant); margin-right: 8px; font-family: var(--ddp-font-mono); }
+.auditAction { font-weight: 600; color: var(--ddp-color-primary); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 8px; font-size: 0.6875rem; }
+.auditActor { font-style: italic; color: var(--ddp-color-on-surface-variant); margin-right: 8px; }
+.auditDetail { font-family: var(--ddp-font-mono); font-size: 0.6875rem; color: var(--ddp-color-on-surface-variant); display: block; margin-top: 2px; }
+
+.cert {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 4px var(--ddp-space-3);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.8125rem;
+}
+.cert dt {
+  color: var(--ddp-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.6875rem;
+  padding-top: 2px;
+}
+.cert dd { margin: 0; }
+.cert code { font-family: var(--ddp-font-mono); font-size: 0.75rem; }

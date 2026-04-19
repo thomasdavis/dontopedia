@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@dontopedia/ui/tokens.css";
 import "./globals.css";
+import { StatementDrawer } from "@/components/StatementDrawer";
 
 export const metadata: Metadata = {
   title: "Dontopedia",
@@ -22,7 +23,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* One drawer for the whole app, opened by dispatching
+            `donto:open-stmt` with { detail: { id } } on window. */}
+        <StatementDrawer />
+      </body>
     </html>
   );
 }

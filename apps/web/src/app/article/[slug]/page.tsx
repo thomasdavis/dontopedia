@@ -18,6 +18,7 @@ import type { Statement } from "@donto/client";
 import { AssertFact } from "@/components/AssertFact";
 import { ArticleTimeline } from "@/components/ArticleTimeline";
 import { HoverToResearch } from "@/components/HoverToResearch";
+import { OpenDetailsButton } from "@/components/OpenDetailsButton";
 import { SearchForm } from "@/components/SearchForm";
 import { StartResearchCTA } from "@/components/StartResearchCTA";
 import { StatementActions } from "@/components/StatementActions";
@@ -416,6 +417,8 @@ function ClaimLine({
         <span className={css.claimCtx} title={stmt.context}>
           {prettifyContext(stmt.context)}
         </span>
+        {" · "}
+        <OpenDetailsButton statementId={stmt.statement_id} />
       </span>
       <StatementActions statementId={stmt.statement_id} />
     </li>

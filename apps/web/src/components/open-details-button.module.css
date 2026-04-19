@@ -1,0 +1,17 @@
+.btn {
+  background: transparent;
+  border: none;
+  padding: 0 4px;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.6875rem;
+  color: var(--ddp-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  border-radius: var(--ddp-radius-sm);
+  transition: color var(--ddp-duration-fast) var(--ddp-easing-standard);
+}
+.btn:hover {
+  color: var(--ddp-color-primary);
+  text-decoration: underline;
+}
