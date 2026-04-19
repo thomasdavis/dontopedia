@@ -15,4 +15,15 @@ if [ -d /creds/.claude ]; then
   cp -r /creds/.claude /root/.claude
 fi
 
-exec claude --print "$@"
+#
+# --permission-mode bypassPermissions: the sandbox is already isolated
+# (cap-drop, memory/pid caps, docker network), so we don't need per-tool
+# prompts. Lets WebSearch / WebFetch / Bash run without interactive approval.
+# --allowed-tools WebSearch WebFetch Bash Read Grep Glob: explicit allowlist
+# so the agent can research but can't Edit or Write (no local writes matter
+# here — it's a throwaway container).
+exec claude \
+  --print \
+  --permission-mode bypassPermissions \
+  --allowed-tools WebSearch WebFetch Bash Read Grep Glob \
+  "$@"
