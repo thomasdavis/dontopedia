@@ -1,0 +1,53 @@
+.row {
+  margin-top: var(--ddp-space-2);
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ddp-space-1);
+  padding: 2px var(--ddp-space-3);
+  border-radius: var(--ddp-radius-pill);
+  border: 1px solid var(--ddp-color-outline-variant);
+  background: transparent;
+  color: var(--ddp-color-on-surface-variant);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background var(--ddp-duration-fast) var(--ddp-easing-standard),
+    border-color var(--ddp-duration-fast) var(--ddp-easing-standard),
+    color var(--ddp-duration-fast) var(--ddp-easing-standard);
+}
+.chip:hover {
+  background: var(--ddp-color-surface-container);
+}
+.chip:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.chip[data-mine] {
+  background: var(--ddp-color-primary-container);
+  color: var(--ddp-color-on-primary-container);
+  border-color: var(--ddp-color-primary);
+}
+
+.chip[data-kind="rejects"][data-mine] {
+  background: var(--ddp-color-error-container);
+  color: var(--ddp-color-on-error-container);
+  border-color: var(--ddp-color-error);
+}
+
+.emoji {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ddp-color-on-surface);
+}

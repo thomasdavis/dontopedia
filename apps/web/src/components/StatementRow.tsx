@@ -12,6 +12,7 @@ import {
   type ContradictionCluster,
 } from "@dontopedia/sdk";
 import type { Statement } from "@donto/client";
+import { StatementActions } from "./StatementActions";
 import css from "./statement-row.module.css";
 
 /**
@@ -81,6 +82,8 @@ export function StatementRow({
           </div>
         </div>
       )}
+
+      <StatementActions statementId={statement.statement_id} />
 
       <details className={css.details}>
         <summary>provenance</summary>

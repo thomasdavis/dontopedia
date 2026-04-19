@@ -1,8 +1,21 @@
 {
+  # Cloudflare is in front on Flexible SSL. That means:
+  #   visitor  ⟷  CF      :443 (CF cert)
+  #   CF       ⟷  origin  :80  (plaintext HTTP)
+  # So Caddy does not need — and must not try — to provision its own cert.
+  # If CF is ever switched to "Full (strict)" + DNS-only, delete this block
+  # and the config below collapses back to:
+  #   dontopedia.com, www.dontopedia.com { reverse_proxy web:3000 }
+  # which will auto-provision a Let's Encrypt cert.
+  auto_https off
   email admin@dontopedia.com
 }
 
-dontopedia.com, www.dontopedia.com {
+# Match any Host on port 80. Works for:
+#   - CF Flexible origin pulls (Host: dontopedia.com)
+#   - direct browser hits to the droplet IP over HTTP
+#   - LE HTTP-01 challenge if we later flip to DNS-only
+:80 {
   encode zstd gzip
   log {
     output stdout
@@ -11,13 +24,7 @@ dontopedia.com, www.dontopedia.com {
   reverse_proxy web:3000
 }
 
-# Optional separate origins; uncomment if wiring these subdomains.
-# donto.dontopedia.com {
-#   reverse_proxy dontosrv:7878
-# }
-# temporal.dontopedia.com {
-#   reverse_proxy temporal-ui:8080
-# }
-# grafana.dontopedia.com {
-#   reverse_proxy grafana:3000
-# }
+# --- Optional subdomains (uncomment + add CF A records to light them up) ---
+# donto.dontopedia.com      { reverse_proxy dontosrv:7878 }
+# temporal.dontopedia.com   { reverse_proxy temporal-ui:8080 }
+# grafana.dontopedia.com    { reverse_proxy grafana:3000 }
