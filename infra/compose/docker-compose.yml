@@ -3,6 +3,11 @@ name: dontopedia
 # Single-host deploy topology. All services share a user-defined bridge so
 # they can reach each other by name; only web, caddy, grafana, and dev ports
 # are published.
+#
+# Build contexts are `../../../` — the PARENT of both dontopedia/ and donto/.
+# Every Dockerfile that needs donto source references it as `donto/...`, and
+# dontopedia source as `dontopedia/...`. This lets us link the local
+# @donto/client without publishing a package.
 services:
   postgres:
     image: postgres:16-alpine
@@ -21,7 +26,6 @@ services:
 
   dontosrv:
     build:
-      # context is the parent of both repos so we can COPY donto/ into the build
       context: ../../../
       dockerfile: dontopedia/infra/docker/dontosrv.Dockerfile
     restart: unless-stopped
@@ -58,43 +62,64 @@ services:
     depends_on:
       - temporal
     ports:
-      - "8233:8080"
+      - "127.0.0.1:8233:8080"
+
+  # Per-session Claude sandbox image. Built here so `docker compose build`
+  # produces it; the worker spawns it with `docker run --rm` when a session
+  # starts. No ports, no long-running container.
+  claude-sandbox:
+    build:
+      context: ../../../
+      dockerfile: dontopedia/infra/docker/claude-sandbox.Dockerfile
+    image: dontopedia-claude-sandbox:latest
+    command: ["--version"]
+    restart: "no"
+    profiles: ["build-only"]
 
   agent-runner:
     build:
-      context: ../../
-      dockerfile: infra/docker/agent-runner.Dockerfile
+      context: ../../../
+      dockerfile: dontopedia/infra/docker/agent-runner.Dockerfile
     restart: unless-stopped
     environment:
       DONTOSRV_URL: http://dontosrv:7878
       TEMPORAL_ADDRESS: temporal:7233
       RUNNER_PUBLIC_URL: http://agent-runner:4001
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       AGENT_RUNNER_MOCK: ${AGENT_RUNNER_MOCK:-0}
     depends_on:
       - dontosrv
       - temporal
     ports:
-      - "4001:4001"
+      - "127.0.0.1:4001:4001"
 
   worker:
     build:
-      context: ../../
-      dockerfile: infra/docker/worker.Dockerfile
+      context: ../../../
+      dockerfile: dontopedia/infra/docker/worker.Dockerfile
     restart: unless-stopped
     environment:
       DONTOSRV_URL: http://dontosrv:7878
       TEMPORAL_ADDRESS: temporal:7233
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      RUNNER_PUBLIC_URL: http://agent-runner:4001
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       EXTRACTION_MODEL: ${EXTRACTION_MODEL:-gpt-4.1-mini}
+      # Sandbox settings — worker spawns per-session sibling containers via
+      # docker.sock. Set CLAUDE_SANDBOX_IMAGE=0 (or unset socket) to fall
+      # back to spawning on the host for dev.
+      CLAUDE_SANDBOX_IMAGE: dontopedia-claude-sandbox:latest
+      CLAUDE_SANDBOX_NETWORK: dontopedia_default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - dontosrv
       - temporal
 
   web:
     build:
-      context: ../../
-      dockerfile: infra/docker/web.Dockerfile
+      context: ../../../
+      dockerfile: dontopedia/infra/docker/web.Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -103,6 +128,8 @@ services:
       AGENT_RUNNER_URL: http://agent-runner:4001
       DATABASE_URL: postgres://donto:donto@postgres:5432/donto
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://dontopedia.com}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAGIC_LINK_FROM: ${MAGIC_LINK_FROM:-Dontopedia <auth@dontopedia.com>}
     depends_on:
       - dontosrv
       - agent-runner
@@ -158,12 +185,12 @@ services:
     depends_on:
       - loki
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
 
   backups:
     build:
-      context: ../../
-      dockerfile: infra/docker/backups.Dockerfile
+      context: ../../../
+      dockerfile: dontopedia/infra/docker/backups.Dockerfile
     restart: unless-stopped
     environment:
       PGURL: postgres://donto:donto@postgres:5432/donto

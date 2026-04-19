@@ -31,7 +31,7 @@
   font-size: 0.8125rem;
 }
 
-.email {
+.label {
   font-family: var(--ddp-font-sans);
   font-size: 0.8125rem;
   color: var(--ddp-color-on-surface);
@@ -41,8 +41,8 @@
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  width: 280px;
-  padding: var(--ddp-space-4);
+  width: 320px;
+  padding: var(--ddp-space-5);
   background: var(--ddp-color-surface-container);
   border: 1px solid var(--ddp-color-outline-variant);
   border-radius: var(--ddp-radius-md);

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import type { Literal } from "@donto/client";
 import {
   assertBatch,
   ensureContext,
@@ -30,11 +31,39 @@ export async function emitProgress(
   }
 }
 
+/**
+ * Run Claude for one research session. Strategy:
+ *
+ * 1. **Sandbox mode** (prod default): when `CLAUDE_SANDBOX_IMAGE` is set
+ *    AND `/var/run/docker.sock` is mounted, spawn a sibling container:
+ *
+ *      docker run --rm --network $CLAUDE_SANDBOX_NETWORK \
+ *        -e ANTHROPIC_API_KEY \
+ *        -e DONTOSRV_URL=http://dontosrv:7878 \
+ *        --memory 1g --pids-limit 256 --cap-drop ALL \
+ *        $CLAUDE_SANDBOX_IMAGE "<prompt>"
+ *
+ *    Each session gets a fresh container, no shared state, dropped caps,
+ *    capped memory + pid count. The container only sees the compose
+ *    network, so it can talk to dontosrv but not arbitrary hosts.
+ *
+ * 2. **Host mode** (dev): no sandbox image → spawn `claude` directly.
+ *    Same stream handling, same prompt. Convenient locally but don't run
+ *    untrusted queries this way in prod.
+ */
 export async function runClaudeResearch(
   input: ResearchInput,
 ): Promise<ResearchTranscript> {
-  const claudeBin = process.env.CLAUDE_BIN ?? "claude";
   const prompt = buildPrompt(input);
+  const sandbox = process.env.CLAUDE_SANDBOX_IMAGE;
+  const hostMode = !sandbox;
+
+  const { bin, args } = hostMode
+    ? { bin: process.env.CLAUDE_BIN ?? "claude", args: ["--print", prompt] }
+    : {
+        bin: "docker",
+        args: buildDockerArgs(sandbox!, prompt, input.sessionId),
+      };
 
   return await new Promise((resolve, reject) => {
     let stdout = "";
@@ -48,20 +77,18 @@ export async function runClaudeResearch(
         msg,
       });
 
+    void emit("step", hostMode ? `spawning ${bin}` : `spawning sandbox container`);
+
     let proc;
     try {
-      proc = spawn(claudeBin, ["--print", prompt], {
-        stdio: ["ignore", "pipe", "pipe"],
-        env: { ...process.env },
-      });
+      proc = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
     } catch (err) {
-      void emit("error", `failed to spawn ${claudeBin}: ${String(err)}`);
+      void emit("error", `failed to spawn ${bin}: ${String(err)}`);
       return reject(err);
     }
 
     proc.stdout.setEncoding("utf8");
     proc.stderr.setEncoding("utf8");
-
     proc.stdout.on("data", (chunk: string) => {
       stdout += chunk;
       for (const line of chunk.split("\n")) {
@@ -83,7 +110,7 @@ export async function runClaudeResearch(
       if (settled) return;
       settled = true;
       if (code !== 0) {
-        return reject(new Error(`claude exited ${code}: ${stderr}`));
+        return reject(new Error(`exited ${code}: ${stderr}`));
       }
       resolve({
         sessionId: input.sessionId,
@@ -94,12 +121,40 @@ export async function runClaudeResearch(
   });
 }
 
+function buildDockerArgs(image: string, prompt: string, sessionId: string): string[] {
+  const network = process.env.CLAUDE_SANDBOX_NETWORK ?? "dontopedia_default";
+  const args = [
+    "run",
+    "--rm",
+    "--name",
+    `claude-${sessionId}`,
+    "--network",
+    network,
+    "--memory",
+    "1g",
+    "--pids-limit",
+    "256",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "-e",
+    `DONTOSRV_URL=${process.env.DONTOSRV_URL ?? "http://dontosrv:7878"}`,
+  ];
+  if (process.env.ANTHROPIC_API_KEY) {
+    args.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
+  }
+  args.push(image, prompt);
+  return args;
+}
+
 function buildPrompt(input: ResearchInput): string {
   return [
     `Dontopedia research session ${input.sessionId}.`,
     `Query: ${JSON.stringify(input.query)}`,
     input.subjectIri ? `Subject: ${input.subjectIri}` : null,
     input.span ? `Highlighted span: ${JSON.stringify(input.span)}` : null,
+    input.actor ? `Actor: ${input.actor}` : null,
     ``,
     `Investigate, cite sources, and present findings plainly. End with a`,
     `"## Summary" section in <=200 words.`,
@@ -132,7 +187,9 @@ export async function ensureResearchContext(iri: string): Promise<string> {
         ? "source"
         : iri.startsWith("ctx:hypo/")
           ? "hypothesis"
-          : "derived",
+          : iri.startsWith("ctx:user/") || iri.startsWith("ctx:anon/")
+            ? "user"
+            : "derived",
     mode: "permissive",
   });
   return iri;
@@ -157,7 +214,7 @@ export async function assertFacts(input: {
     subject: f.subject,
     predicate: f.predicate,
     object_iri: "iri" in f.object ? f.object.iri : null,
-    object_lit: "literal" in f.object ? f.object.literal : null,
+    object_lit: "literal" in f.object ? (f.object.literal as Literal) : null,
     context: input.context,
     polarity: f.polarity,
     maturity: f.maturity,

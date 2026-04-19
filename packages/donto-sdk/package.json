@@ -17,6 +17,7 @@
     "@donto/client": "file:../../../donto/packages/donto-client"
   },
   "devDependencies": {
+    "@types/node": "^22.9.0",
     "typescript": "^5.7.2"
   }
 }

@@ -4,130 +4,156 @@ import { cookies } from "next/headers";
 import { ensureContext } from "@donto/client/ingest";
 import { ensureMigrations, pool } from "./db";
 
-export const SESSION_COOKIE = "ddp_session";
-const SESSION_DAYS = 30;
-const TOKEN_MINUTES = 20;
+/**
+ * Anonymous-by-default identity model.
+ *
+ * - First request creates a `dontopedia.identities` row + a session cookie.
+ * - Identity carries a donto context IRI (`ctx:anon/<uuid>`). Everything
+ *   that user asserts is filed under that context — paraconsistent, full
+ *   bitemporal history, and if they later claim a display name we don't
+ *   rewrite the IRI.
+ * - There is no email, no password, no magic link. "Signed in" means
+ *   "has a cookie with a known identity". Logging out = new identity.
+ *
+ * This matches donto's model: context-per-actor is the authorisation
+ * primitive. The app just has to remember which cookie ↔ which context.
+ */
 
-export interface User {
+export const SESSION_COOKIE = "ddp_session";
+const SESSION_DAYS = 365;
+
+export interface Identity {
   id: string;
-  email: string;
   iri: string;
+  displayName: string | null;
 }
 
 function dontosrvBase(): string {
   return process.env.DONTOSRV_URL ?? "http://localhost:7878";
 }
 
-/** Request a magic link. Returns the token so tests / dev can verify it. */
-export async function requestMagicLink(email: string): Promise<{
-  token: string;
-  userId: string;
-  userIri: string;
-  expiresAt: Date;
-}> {
+/**
+ * Returns the caller's identity, creating one on the fly if absent. Always
+ * returns a real identity — never null. Safe to call from server components.
+ */
+export async function currentIdentity(): Promise<Identity> {
   await ensureMigrations();
-  const p = pool();
-  const clean = email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
-    throw new Error("invalid email");
+  const jar = await cookies();
+  const cookie = jar.get(SESSION_COOKIE)?.value;
+
+  if (cookie) {
+    const p = pool();
+    const r = await p.query(
+      `select i.id, i.iri, i.display_name
+         from dontopedia.sessions s
+         join dontopedia.identities i on i.id = s.identity_id
+        where s.cookie = $1 and s.expires_at > now()`,
+      [cookie],
+    );
+    const row = r.rows[0] as
+      | { id: string; iri: string; display_name: string | null }
+      | undefined;
+    if (row) {
+      void touchLastSeen(row.id);
+      return { id: row.id, iri: row.iri, displayName: row.display_name };
+    }
   }
 
-  const userId = randomUUID();
-  const userIri = `ctx:user/${userId}`;
-
-  const inserted = await p.query(
-    `insert into dontopedia.users (id, email, iri)
-     values ($1, $2, $3)
-     on conflict (email_norm) do update set last_seen = now()
-     returning id, email, iri`,
-    [userId, clean, userIri],
-  );
-  const user = inserted.rows[0] as { id: string; email: string; iri: string };
-
-  // Make sure the user's donto context exists so anything they write has a
-  // home. Fire-and-forget tolerates dontosrv being slow/absent during signup.
-  ensureContext(dontosrvBase(), {
-    iri: user.iri,
-    kind: "user",
-    mode: "permissive",
-  }).catch(() => {});
-
-  const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + TOKEN_MINUTES * 60 * 1000);
-  await p.query(
-    `insert into dontopedia.magic_tokens (token, user_id, expires_at)
-     values ($1, $2, $3)`,
-    [token, user.id, expiresAt],
-  );
-
-  return { token, userId: user.id, userIri: user.iri, expiresAt };
+  return bootstrapAnonymous();
 }
 
-export async function verifyMagicLink(token: string): Promise<User> {
+/**
+ * Optionally exposed for places that want to know "has the caller bothered
+ * to name themselves?" without bootstrapping a session. Returns null if no
+ * cookie is set or it doesn't resolve.
+ */
+export async function peekIdentity(): Promise<Identity | null> {
+  const jar = await cookies();
+  const cookie = jar.get(SESSION_COOKIE)?.value;
+  if (!cookie) return null;
   await ensureMigrations();
-  const p = pool();
-  const r = await p.query(
-    `update dontopedia.magic_tokens
-        set used_at = now()
-      where token = $1
-        and used_at is null
-        and expires_at > now()
-      returning user_id`,
-    [token],
+  const r = await pool().query(
+    `select i.id, i.iri, i.display_name
+       from dontopedia.sessions s
+       join dontopedia.identities i on i.id = s.identity_id
+      where s.cookie = $1 and s.expires_at > now()`,
+    [cookie],
   );
-  if (r.rowCount === 0) throw new Error("invalid or expired token");
-  const userId = r.rows[0].user_id as string;
+  const row = r.rows[0] as
+    | { id: string; iri: string; display_name: string | null }
+    | undefined;
+  return row ? { id: row.id, iri: row.iri, displayName: row.display_name } : null;
+}
 
-  const u = await p.query(
-    `select id, email, iri from dontopedia.users where id = $1`,
-    [userId],
+async function bootstrapAnonymous(): Promise<Identity> {
+  const p = pool();
+  const id = randomUUID();
+  const iri = `ctx:anon/${id}`;
+  await p.query(
+    `insert into dontopedia.identities (id, iri) values ($1, $2)
+     on conflict (iri) do nothing`,
+    [id, iri],
   );
-  const user = u.rows[0] as User;
+
+  // Fire-and-forget: ensure the donto context exists so the first
+  // assertion by this identity has a home. If dontosrv is slow, the
+  // subsequent /assert call will create it.
+  ensureContext(dontosrvBase(), { iri, kind: "user", mode: "permissive" }).catch(
+    () => {},
+  );
+
   const cookie = randomBytes(32).toString("base64url");
   const expires = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await p.query(
-    `insert into dontopedia.sessions (cookie, user_id, expires_at)
+    `insert into dontopedia.sessions (cookie, identity_id, expires_at)
      values ($1, $2, $3)`,
-    [cookie, userId, expires],
+    [cookie, id, expires],
   );
-
-  const c = await cookies();
-  c.set(SESSION_COOKIE, cookie, {
+  const jar = await cookies();
+  jar.set(SESSION_COOKIE, cookie, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     expires,
   });
-  await p.query(
-    `update dontopedia.users set last_seen = now() where id = $1`,
-    [userId],
-  );
-  return user;
+
+  return { id, iri, displayName: null };
 }
 
-export async function currentUser(): Promise<User | null> {
-  const c = await cookies();
-  const cookie = c.get(SESSION_COOKIE)?.value;
-  if (!cookie) return null;
+export async function setDisplayName(name: string): Promise<Identity> {
   await ensureMigrations();
-  const p = pool();
-  const r = await p.query(
-    `select u.id, u.email, u.iri
-       from dontopedia.sessions s
-       join dontopedia.users u on u.id = s.user_id
-      where s.cookie = $1 and s.expires_at > now()`,
-    [cookie],
+  const trimmed = name.trim();
+  if (trimmed.length === 0 || trimmed.length > 80) {
+    throw new Error("display name must be 1–80 characters");
+  }
+  const current = await currentIdentity();
+  await pool().query(
+    `update dontopedia.identities set display_name = $1 where id = $2`,
+    [trimmed, current.id],
   );
-  return (r.rows[0] as User | undefined) ?? null;
+  return { ...current, displayName: trimmed };
 }
 
-export async function signOut(): Promise<void> {
-  const c = await cookies();
-  const cookie = c.get(SESSION_COOKIE)?.value;
+export async function forgetIdentity(): Promise<void> {
+  const jar = await cookies();
+  const cookie = jar.get(SESSION_COOKIE)?.value;
   if (cookie) {
     await ensureMigrations();
-    await pool().query(`delete from dontopedia.sessions where cookie = $1`, [cookie]);
+    await pool().query(`delete from dontopedia.sessions where cookie = $1`, [
+      cookie,
+    ]);
   }
-  c.delete(SESSION_COOKIE);
+  jar.delete(SESSION_COOKIE);
+}
+
+async function touchLastSeen(id: string): Promise<void> {
+  try {
+    await pool().query(
+      `update dontopedia.identities set last_seen = now() where id = $1`,
+      [id],
+    );
+  } catch {
+    /* non-fatal */
+  }
 }

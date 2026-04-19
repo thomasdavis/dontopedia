@@ -1,0 +1,22 @@
+.page {
+  padding-bottom: var(--ddp-space-16);
+}
+
+.body {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--ddp-space-10) var(--ddp-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-8);
+}
+
+.list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ddp-space-3);
+}
+
+.row {
+  padding: var(--ddp-space-4) var(--ddp-space-5);
+}

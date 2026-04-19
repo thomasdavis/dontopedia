@@ -1,3 +1,14 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: inherit;
+}
+
 .popup {
   background: var(--ddp-color-surface-container-highest);
   color: var(--ddp-color-on-surface);

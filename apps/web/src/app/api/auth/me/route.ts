@@ -1,6 +1,6 @@
-import { currentUser } from "@/server/auth";
+import { currentIdentity } from "@/server/auth";
 
 export async function GET() {
-  const user = await currentUser();
-  return Response.json({ user });
+  const identity = await currentIdentity();
+  return Response.json({ identity });
 }

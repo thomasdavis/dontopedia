@@ -1,6 +1,6 @@
-import { signOut } from "@/server/auth";
+import { forgetIdentity } from "@/server/auth";
 
 export async function POST() {
-  await signOut();
+  await forgetIdentity();
   return Response.json({ ok: true });
 }

@@ -7,6 +7,7 @@ import {
   iriLabel,
   slugToIri,
 } from "@dontopedia/sdk";
+import { AssertFact } from "@/components/AssertFact";
 import { HoverToResearch } from "@/components/HoverToResearch";
 import { SearchForm } from "@/components/SearchForm";
 import { StartResearchCTA } from "@/components/StartResearchCTA";
@@ -59,16 +60,19 @@ export default async function ArticlePage({
               {iri}
             </Text>
           </Stack>
-          <Stack direction="row" gap={3} align="center">
-            <Badge tone="primary">
-              {currentRows.length} fact{currentRows.length === 1 ? "" : "s"}
-            </Badge>
-            {contradictions.length > 0 && (
-              <Badge tone="conflict">
-                {contradictions.length} disagreement
-                {contradictions.length === 1 ? "" : "s"}
+          <Stack direction="row" gap={3} align="center" justify="between" wrap>
+            <Stack direction="row" gap={3} align="center">
+              <Badge tone="primary">
+                {currentRows.length} fact{currentRows.length === 1 ? "" : "s"}
               </Badge>
-            )}
+              {contradictions.length > 0 && (
+                <Badge tone="conflict">
+                  {contradictions.length} disagreement
+                  {contradictions.length === 1 ? "" : "s"}
+                </Badge>
+              )}
+            </Stack>
+            <AssertFact subjectIri={iri} />
           </Stack>
         </header>
 
@@ -153,15 +157,18 @@ function EmptyArticle({ iri }: { iri: string }) {
               {iri}
             </Text>
             <Text>
-              Nothing is asserted about this subject yet. Dontopedia only has what
-              someone has researched — spin up a session to have a Claude agent
-              investigate and file facts with sources.
+              Nothing is asserted about this subject yet. File the first fact
+              yourself, or spin up a research session and let a Claude agent
+              do the legwork with sources.
             </Text>
-            <StartResearchCTA
-              query={iriLabel(iri)}
-              subjectIri={iri}
-              label="Research this subject"
-            />
+            <Stack direction="row" gap={3} align="center" wrap>
+              <StartResearchCTA
+                query={iriLabel(iri)}
+                subjectIri={iri}
+                label="Research this subject"
+              />
+              <AssertFact subjectIri={iri} />
+            </Stack>
           </Stack>
         </Card>
       </div>

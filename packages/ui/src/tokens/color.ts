@@ -54,9 +54,11 @@ export const color = {
   accentHypothesis: "#6750a4",
   accentSource: "#006874",
   accentDerived: "#006a66",
-} as const;
+} satisfies Record<string, string>;
 
-export const darkColor: typeof color = {
+export type ColorPalette = typeof color;
+
+export const darkColor: ColorPalette = {
   primary: "#ffb876",
   onPrimary: "#472a00",
   primaryContainer: "#653e00",

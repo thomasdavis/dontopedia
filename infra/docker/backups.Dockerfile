@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.7
+# Build context: parent of dontopedia/ and donto/.
 FROM alpine:3.20
 
 RUN apk add --no-cache \
@@ -12,8 +13,8 @@ RUN apk add --no-cache \
     dcron \
     tzdata
 
-COPY infra/backups/pg-backup.sh /usr/local/bin/pg-backup.sh
-COPY infra/backups/crontab /etc/crontabs/root
+COPY dontopedia/infra/backups/pg-backup.sh /usr/local/bin/pg-backup.sh
+COPY dontopedia/infra/backups/crontab /etc/crontabs/root
 RUN chmod +x /usr/local/bin/pg-backup.sh \
  && mkdir -p /backups /var/log \
  && touch /var/log/pg-backup.log

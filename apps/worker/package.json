@@ -13,6 +13,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@donto/client": "file:../../../donto/packages/donto-client",
     "@dontopedia/extraction": "workspace:*",
     "@dontopedia/sdk": "workspace:*",
     "@dontopedia/workflows": "workspace:*",

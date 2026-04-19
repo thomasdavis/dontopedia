@@ -12,8 +12,12 @@ export interface ExtractOptions {
 
 /**
  * Run gpt-4.1-mini over a research transcript and return validated facts.
- * Uses OpenAI structured outputs + Zod so we never get malformed JSON into
- * the assertion pipeline.
+ * Uses OpenAI structured outputs (`beta.chat.completions.parse`) + Zod so
+ * malformed JSON can never reach the assertion pipeline.
+ *
+ * Note: `parse` lives under `beta.chat.completions` in openai@4.x. When we
+ * move to openai@5+, the stable path is `chat.completions.parse` and this
+ * file can drop the `beta.` segment.
  */
 export async function extractFactsFromText(
   transcript: string,
@@ -30,7 +34,7 @@ export async function extractFactsFromText(
     .filter(Boolean)
     .join("\n\n");
 
-  const completion = await client.chat.completions.parse({
+  const completion = await client.beta.chat.completions.parse({
     model,
     response_format: zodResponseFormat(FactListSchema, "facts"),
     messages: [

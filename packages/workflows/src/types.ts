@@ -29,7 +29,7 @@ export const ExtractedFact = z.object({
   predicate: z.string(),
   object: z.union([
     z.object({ iri: z.string() }),
-    z.object({ literal: z.object({ v: z.unknown(), dt: z.string(), lang: z.string().nullable().optional() }) }),
+    z.object({ literal: z.object({ v: z.any(), dt: z.string(), lang: z.string().nullable().optional() }) }),
   ]),
   polarity: z.enum(["asserted", "negated", "absent", "unknown"]).default("asserted"),
   maturity: z.number().int().min(0).max(4).default(0),

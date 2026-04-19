@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { currentUser } from "@/server/auth";
-import { UserMenu } from "./UserMenu";
+import { currentIdentity } from "@/server/auth";
+import { IdentityMenu } from "./IdentityMenu";
 import css from "./topbar.module.css";
 
 export async function TopBar({ children }: { children?: ReactNode }) {
-  const user = await currentUser().catch(() => null);
+  const identity = await currentIdentity();
   return (
     <header className={css.bar}>
       <Link href="/" className={css.brand}>
@@ -13,14 +13,19 @@ export async function TopBar({ children }: { children?: ReactNode }) {
         <span className={css.word}>Dontopedia</span>
       </Link>
       <div className={css.search}>{children}</div>
+      <nav className={css.nav}>
+        <Link href="/recent" className={css.navItem}>
+          recent
+        </Link>
+        <Link href="/predicates" className={css.navItem}>
+          predicates
+        </Link>
+      </nav>
       <div className={css.right}>
-        {user ? (
-          <UserMenu email={user.email} iri={user.iri} />
-        ) : (
-          <Link href="/login" className={css.signin}>
-            sign in
-          </Link>
-        )}
+        <IdentityMenu
+          iri={identity.iri}
+          displayName={identity.displayName}
+        />
       </div>
     </header>
   );

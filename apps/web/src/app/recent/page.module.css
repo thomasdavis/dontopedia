@@ -1,0 +1,31 @@
+.page {
+  padding-bottom: var(--ddp-space-16);
+}
+
+.body {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--ddp-space-10) var(--ddp-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-10);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--ddp-space-3);
+}
+
+.card {
+  padding: var(--ddp-space-4);
+}
+
+.iri {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+.label {
+  font-family: var(--ddp-font-serif);
+}
