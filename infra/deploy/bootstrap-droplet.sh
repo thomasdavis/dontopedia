@@ -87,6 +87,7 @@ cat <<'EOF'
 
   # 3. Verify:
   docker compose ps
-  curl -I https://dontopedia.com   # 200 once Caddy has the cert
+  curl -I https://dontopedia.com   # 200 once public DNS / edge are correct
+  curl -I http://64.227.103.33 -H 'Host: dontopedia.com'  # origin check
 
 EOF

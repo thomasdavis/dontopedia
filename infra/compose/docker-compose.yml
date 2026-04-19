@@ -149,7 +149,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Mount the whole compose dir, not just the file. A single-file bind
+      # mount can stay pinned to the old inode after a git pull/checkout,
+      # which leaves Caddy serving stale config until the container is
+      # manually recreated.
+      - ./:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:

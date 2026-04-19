@@ -36,7 +36,7 @@
 - [x] Observability: Loki + Promtail + Grafana with prewired dashboard
 - [x] Backups: nightly `pg_dump` sidecar, optional S3/DO Spaces upload
 - [x] Droplet bootstrap + `doctl compute droplet create` script;
-      Caddy auto-TLS for dontopedia.com
+      Caddy fronting dontopedia.com on the production droplet
 - [x] DNS runbook at `infra/deploy/DNS.md`
 - [x] `pnpm -r typecheck` clean; `apps/web` production build clean
 

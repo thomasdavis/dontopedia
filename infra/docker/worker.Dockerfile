@@ -1,8 +1,14 @@
 # syntax=docker/dockerfile:1.7
 # Build context: parent of dontopedia/ and donto/.
+#
+# Debian slim (not alpine) — @temporalio/core-bridge ships a native Node
+# addon linked against glibc; musl-based alpine hits
+# "Error loading shared library ld-linux-x86-64.so.2: No such file".
 
-FROM node:22-alpine AS base
-RUN apk add --no-cache bash ca-certificates docker-cli
+FROM node:22-bookworm-slim AS base
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends bash ca-certificates docker.io \
+ && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 WORKDIR /repo
 

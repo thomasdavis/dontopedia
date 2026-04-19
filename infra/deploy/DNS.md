@@ -1,11 +1,42 @@
 # DNS setup for dontopedia.com
 
-Dontopedia uses **DigitalOcean DNS** — the same account `doctl` is authed
-against owns the zone and the droplet, so `infra/deploy/do-dns.sh` (and
-the `go.sh` wrapper) handles the whole thing from one CLI. No Cloudflare
-API tokens, no separate providers.
+The live domain is currently delegated to **Cloudflare** nameservers:
 
-## One-time registrar step (manual — we can't do this for you)
+```bash
+dig NS dontopedia.com +short
+# edna.ns.cloudflare.com.
+# jim.ns.cloudflare.com.
+```
+
+That means the DigitalOcean DNS zone in this repo is currently **non-authoritative**
+from the public internet. `infra/deploy/do-dns.sh` can still seed or mirror records
+in DO, but those records do nothing until the registrar is repointed to
+`ns1.digitalocean.com/ns2.digitalocean.com/ns3.digitalocean.com`.
+
+Today, production works with:
+
+- Cloudflare proxying `dontopedia.com` / `www.dontopedia.com`
+- Cloudflare SSL mode compatible with the `infra/compose/Caddyfile` origin
+- Caddy speaking plain HTTP on port 80 to the Cloudflare edge
+
+If you want the older DO-only / Caddy auto-TLS setup instead, you must do both:
+
+1. Repoint the registrar nameservers to DigitalOcean.
+2. Revert `infra/compose/Caddyfile` back to named hosts with automatic HTTPS.
+
+## Current authoritative DNS
+
+Update these records in **Cloudflare DNS**, not DigitalOcean DNS:
+
+| Type | Host | Value |
+|------|------|-------|
+| A | `@` | `64.227.103.33` |
+| A | `www` | `64.227.103.33` |
+
+The matching DO zone can be kept in sync as a standby copy, but it is not live
+until the registrar delegation changes.
+
+## If you switch back to DigitalOcean DNS
 
 At whichever registrar owns dontopedia.com (Namecheap / Porkbun / DO itself
 / …), set the nameservers to:
@@ -31,8 +62,8 @@ Run by `infra/deploy/do-dns.sh` against the zone on DO's side:
 | CAA  | `dontopedia.com`    | `0 issue "letsencrypt.org"` | CA lock-in for Caddy |
 | CAA  | `dontopedia.com`    | `0 issuewild "letsencrypt.org"` | ditto for wildcards |
 
-That's everything the site needs. Caddy grabs Let's Encrypt certs within
-~30s of DNS resolving.
+Those records are sufficient only if the registrar is actually pointed at
+DigitalOcean and Caddy is running the auto-HTTPS config.
 
 ## What you do NOT need
 
@@ -60,8 +91,24 @@ its own password (`GRAFANA_PASSWORD` env); Temporal UI has no auth.
 ## Verifying
 
 ```bash
-# after registrar NS change has propagated:
-dig +short A dontopedia.com       # → droplet IP
-dig +short A www.dontopedia.com   # → droplet IP
-curl -I https://dontopedia.com    # once Caddy has the cert, HTTP/2 200
+# public delegation:
+dig NS dontopedia.com +short
+
+# public site:
+curl -I https://dontopedia.com    # HTTP/2 200
+
+# origin bypassing Cloudflare:
+curl -I http://64.227.103.33 -H 'Host: dontopedia.com'  # HTTP/1.1 200
 ```
+
+## Caddy reloads
+
+If you change `infra/compose/Caddyfile`, recreate only the `caddy` service:
+
+```bash
+cd /srv/dontopedia/infra/compose
+docker compose --env-file ../../.env up -d --no-deps --force-recreate caddy
+```
+
+This repo mounts the whole compose directory into `/etc/caddy` so git-driven
+file replacements stay visible to new containers.
