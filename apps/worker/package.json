@@ -18,7 +18,8 @@
     "@dontopedia/sdk": "workspace:*",
     "@dontopedia/workflows": "workspace:*",
     "@temporalio/activity": "^1.11.6",
-    "@temporalio/worker": "^1.11.6"
+    "@temporalio/worker": "^1.11.6",
+    "@temporalio/workflow": "^1.11.6"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
