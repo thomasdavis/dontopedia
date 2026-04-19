@@ -31,20 +31,41 @@ fastify.get<{ Params: { sessionId: string } }>(
   "/research/:sessionId/stream",
   (req, reply) => {
     const { sessionId } = req.params;
+    // Fastify v5 buffers `reply.raw.write` until the handler promise settles
+    // unless we explicitly hijack the socket. Without this, SSE events sit
+    // invisible until the request closes — indistinguishable from "the
+    // worker isn't emitting anything", which wastes a lot of debugging time.
+    reply.hijack();
     reply.raw.writeHead(200, {
       "content-type": "text/event-stream",
       "cache-control": "no-cache, no-transform",
       connection: "keep-alive",
+      // Disable any intermediary buffering (nginx-style reverse proxies).
+      "x-accel-buffering": "no",
     });
+    // Flush the headers so the client sees 200 immediately.
+    if (typeof (reply.raw as { flushHeaders?: () => void }).flushHeaders === "function") {
+      (reply.raw as { flushHeaders?: () => void }).flushHeaders!();
+    }
 
     const send = (ev: LogEvent) => {
       reply.raw.write(`event: event\n`);
       reply.raw.write(`data: ${JSON.stringify(ev)}\n\n`);
     };
 
+    // Periodic keepalive comment; some proxies drop idle SSE after ~60s.
+    const keepalive = setInterval(() => {
+      try {
+        reply.raw.write(`: keepalive\n\n`);
+      } catch {
+        /* socket closed */
+      }
+    }, 20_000);
+
     const unsubscribe = subscribe(sessionId, send);
 
     req.raw.on("close", () => {
+      clearInterval(keepalive);
       unsubscribe();
       try {
         reply.raw.end();
