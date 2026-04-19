@@ -12,3 +12,4 @@ export * from "./group";
 export * from "./contradict";
 export * from "./context";
 export * from "./reactions";
+export * from "./prettify";
