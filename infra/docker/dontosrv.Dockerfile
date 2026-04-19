@@ -2,7 +2,8 @@
 # Builds the donto HTTP sidecar (dontosrv) from the sibling donto repo.
 # Build context: parent of dontopedia/ and donto/ (../../../ from compose).
 
-FROM rust:1.82-slim-bookworm AS build
+# Rust 1.85+ — edition2024 dependencies in the donto crate tree require it.
+FROM rust:1.85-slim-bookworm AS build
 RUN apt-get update \
  && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates \
  && rm -rf /var/lib/apt/lists/*
