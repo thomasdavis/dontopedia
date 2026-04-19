@@ -38,11 +38,20 @@ export function prettifyLabel(iri: string): string {
     .join(" ");
 }
 
-/** Short label for a context IRI — drops the prefix, prettifies the tail. */
+/**
+ * Short label for a context IRI. Keeps UUID-shaped tails intact (we don't
+ * want "ctx:research/6e6ac7d0-..." turning into "6e6ac7d0 A1b8 4ac2 ...").
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function prettifyContext(iri: string): string {
   if (iri === "donto:anonymous") return "anonymous";
   const slash = iri.indexOf("/");
   if (slash < 0) return iri;
+  const kind = iri.slice(0, slash); // "ctx:research"
   const tail = iri.slice(slash + 1);
+  if (UUID_RE.test(tail)) {
+    const shortKind = kind.startsWith("ctx:") ? kind.slice(4) : kind;
+    return `${shortKind} · ${tail.slice(0, 8)}`;
+  }
   return prettifyLabel("x:" + tail);
 }
