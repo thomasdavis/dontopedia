@@ -13,8 +13,10 @@ fi
 chown -R claude:claude /home/claude
 chmod 0600 /home/claude/.claude.json 2>/dev/null || true
 
+# --allowed-tools is a variadic flag; passing a comma-separated single
+# arg stops it from greedily swallowing the prompt.
 exec su-exec claude claude \
   --print \
   --permission-mode bypassPermissions \
-  --allowed-tools WebSearch WebFetch Bash Read Grep Glob \
-  "$@"
+  --allowed-tools "WebSearch,WebFetch,Bash,Read,Grep,Glob" \
+  -- "$@"
