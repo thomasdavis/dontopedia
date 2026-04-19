@@ -1,0 +1,30 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "globalDependencies": [".env*", "tsconfig.base.json"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DONTOSRV_URL",
+    "NEXT_PUBLIC_DONTOSRV_URL",
+    "NEXT_PUBLIC_AGENT_RUNNER_URL",
+    "AGENT_RUNNER_URL",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "TEMPORAL_ADDRESS",
+    "DATABASE_URL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": { "outputs": [] },
+    "typecheck": { "outputs": [], "dependsOn": ["^build"] },
+    "test": { "outputs": [], "dependsOn": ["^build"] },
+    "clean": { "cache": false }
+  }
+}

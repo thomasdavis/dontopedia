@@ -1,0 +1,42 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ddp-space-1);
+  padding: 2px var(--ddp-space-2);
+  border-radius: var(--ddp-radius-pill);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.neutral {
+  background: var(--ddp-color-surface-container-high);
+  color: var(--ddp-color-on-surface-variant);
+}
+.primary {
+  background: var(--ddp-color-primary-container);
+  color: var(--ddp-color-on-primary-container);
+}
+.source {
+  background: color-mix(in oklab, var(--ddp-color-accent-source) 20%, transparent);
+  color: var(--ddp-color-accent-source);
+}
+.hypothesis {
+  background: color-mix(in oklab, var(--ddp-color-accent-hypothesis) 20%, transparent);
+  color: var(--ddp-color-accent-hypothesis);
+}
+.derived {
+  background: color-mix(in oklab, var(--ddp-color-accent-derived) 20%, transparent);
+  color: var(--ddp-color-accent-derived);
+}
+.conflict {
+  background: var(--ddp-color-conflict-container);
+  color: var(--ddp-color-on-conflict-container);
+}
+.error {
+  background: var(--ddp-color-error-container);
+  color: var(--ddp-color-on-error-container);
+}

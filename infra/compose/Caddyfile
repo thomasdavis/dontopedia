@@ -1,0 +1,20 @@
+{
+  email admin@dontopedia.com
+}
+
+dontopedia.com, www.dontopedia.com {
+  encode zstd gzip
+  log {
+    output stdout
+    format console
+  }
+  reverse_proxy web:3000
+}
+
+# Optional separate origins; uncomment if wiring these subdomains.
+# donto.dontopedia.com {
+#   reverse_proxy dontosrv:7878
+# }
+# temporal.dontopedia.com {
+#   reverse_proxy temporal-ui:8080
+# }

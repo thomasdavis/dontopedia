@@ -1,0 +1,25 @@
+.card {
+  border-radius: var(--ddp-radius-lg);
+  background: var(--ddp-color-surface);
+  color: var(--ddp-color-on-surface);
+  transition:
+    box-shadow var(--ddp-duration-normal) var(--ddp-easing-standard),
+    transform var(--ddp-duration-normal) var(--ddp-easing-standard);
+}
+
+.elevated {
+  box-shadow: var(--ddp-elevation-1);
+}
+.filled {
+  background: var(--ddp-color-surface-container);
+}
+.outlined {
+  border: 1px solid var(--ddp-color-outline-variant);
+}
+
+.card[data-interactive]:hover {
+  box-shadow: var(--ddp-elevation-2);
+}
+.card[data-interactive]:active {
+  transform: translateY(1px);
+}

@@ -1,0 +1,12 @@
+.popup {
+  background: var(--ddp-color-surface-container-highest);
+  color: var(--ddp-color-on-surface);
+  border: 1px solid var(--ddp-color-outline-variant);
+  padding: var(--ddp-space-2) var(--ddp-space-3);
+  border-radius: var(--ddp-radius-sm);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  max-width: 320px;
+  box-shadow: var(--ddp-elevation-2);
+}

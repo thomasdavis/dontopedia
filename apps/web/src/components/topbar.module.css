@@ -1,0 +1,44 @@
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: color-mix(in oklab, var(--ddp-color-background) 92%, transparent);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--ddp-color-outline-variant);
+  padding: var(--ddp-space-3) var(--ddp-space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--ddp-space-8);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ddp-space-2);
+  text-decoration: none;
+  color: inherit;
+}
+.brand:hover { text-decoration: none; }
+
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 35%,
+    var(--ddp-color-primary),
+    color-mix(in oklab, var(--ddp-color-primary) 50%, #000)
+  );
+}
+
+.word {
+  font-family: var(--ddp-font-serif);
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+
+.search {
+  flex: 1;
+  max-width: 600px;
+}

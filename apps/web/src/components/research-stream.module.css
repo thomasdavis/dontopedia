@@ -1,0 +1,53 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.head {
+  padding: var(--ddp-space-3) var(--ddp-space-4);
+  border-bottom: 1px solid var(--ddp-color-outline-variant);
+  background: var(--ddp-color-surface-container);
+}
+
+.log {
+  max-height: 60vh;
+  min-height: 280px;
+  overflow-y: auto;
+  padding: var(--ddp-space-3) var(--ddp-space-4);
+  font-family: var(--ddp-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.empty {
+  font-family: var(--ddp-font-sans);
+  padding: var(--ddp-space-4);
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 88px 120px 1fr;
+  gap: var(--ddp-space-3);
+  padding: var(--ddp-space-1) 0;
+  border-bottom: 1px dashed color-mix(in oklab, var(--ddp-color-outline-variant) 60%, transparent);
+}
+
+.time {
+  color: var(--ddp-color-on-surface-variant);
+}
+.kind {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.6875rem;
+  color: var(--ddp-color-on-surface-variant);
+}
+.msg {
+  color: var(--ddp-color-on-surface);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.line[data-kind="asserted"] .kind { color: var(--ddp-color-accent-derived); }
+.line[data-kind="extracted"] .kind { color: var(--ddp-color-accent-source); }
+.line[data-kind="error"] .kind { color: var(--ddp-color-error); }
+.line[data-kind="done"] .kind { color: var(--ddp-color-primary); }

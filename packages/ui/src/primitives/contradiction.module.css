@@ -1,0 +1,39 @@
+.mark {
+  display: inline;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background-image: linear-gradient(
+    to top,
+    var(--ddp-color-conflict-container) 0,
+    var(--ddp-color-conflict-container) calc(0.12em + var(--intensity, 1) * 0.06em),
+    transparent calc(0.12em + var(--intensity, 1) * 0.06em),
+    transparent 100%
+  );
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background var(--ddp-duration-fast) var(--ddp-easing-standard);
+  border-radius: 2px;
+}
+
+.mark[data-intensity="1"] { --intensity: 1; }
+.mark[data-intensity="2"] { --intensity: 2; }
+.mark[data-intensity="3"] { --intensity: 3; }
+.mark[data-intensity="4"] { --intensity: 4; }
+.mark[data-intensity="5"] { --intensity: 5; }
+
+.mark:hover {
+  background-image: linear-gradient(
+    to top,
+    var(--ddp-color-conflict) 0,
+    var(--ddp-color-conflict) 100%
+  );
+  color: var(--ddp-color-on-conflict);
+}
+.mark:focus-visible {
+  outline: 2px solid var(--ddp-color-conflict);
+  outline-offset: 2px;
+}

@@ -1,0 +1,124 @@
+name: dontopedia
+
+# Single-host deploy topology. All services share a user-defined bridge so
+# they can reach each other by name; only web and caddy are published.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: donto
+      POSTGRES_PASSWORD: donto
+      POSTGRES_DB: donto
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U donto"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  dontosrv:
+    build:
+      # context is the parent of both repos so we can COPY donto/ into the build
+      context: ../../../
+      dockerfile: dontopedia/infra/docker/dontosrv.Dockerfile
+    restart: unless-stopped
+    environment:
+      DONTO_DSN: postgres://donto:donto@postgres:5432/donto
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "7878:7878"
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    restart: unless-stopped
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: donto
+      POSTGRES_PWD: donto
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: "config/dynamicconfig/development-sql.yaml"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: "http://localhost:3000"
+    depends_on:
+      - temporal
+    ports:
+      - "8233:8080"
+
+  agent-runner:
+    build:
+      context: ../../
+      dockerfile: infra/docker/agent-runner.Dockerfile
+    restart: unless-stopped
+    environment:
+      DONTOSRV_URL: http://dontosrv:7878
+      TEMPORAL_ADDRESS: temporal:7233
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AGENT_RUNNER_MOCK: ${AGENT_RUNNER_MOCK:-0}
+    depends_on:
+      - dontosrv
+      - temporal
+    ports:
+      - "4001:4001"
+
+  worker:
+    build:
+      context: ../../
+      dockerfile: infra/docker/worker.Dockerfile
+    restart: unless-stopped
+    environment:
+      DONTOSRV_URL: http://dontosrv:7878
+      TEMPORAL_ADDRESS: temporal:7233
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      EXTRACTION_MODEL: ${EXTRACTION_MODEL:-gpt-4.1-mini}
+    depends_on:
+      - dontosrv
+      - temporal
+
+  web:
+    build:
+      context: ../../
+      dockerfile: infra/docker/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      DONTOSRV_URL: http://dontosrv:7878
+      NEXT_PUBLIC_DONTOSRV_URL: ${NEXT_PUBLIC_DONTOSRV_URL:-http://localhost:7878}
+      AGENT_RUNNER_URL: http://agent-runner:4001
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://dontopedia.com}
+    depends_on:
+      - dontosrv
+      - agent-runner
+    ports:
+      - "3000:3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:

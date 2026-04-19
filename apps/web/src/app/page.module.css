@@ -1,0 +1,41 @@
+.hero {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--ddp-space-8) var(--ddp-space-4);
+}
+
+.inner {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ddp-space-10);
+  margin-top: -8vh;
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: var(--ddp-space-3);
+}
+
+.dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 35%,
+    var(--ddp-color-primary),
+    color-mix(in oklab, var(--ddp-color-primary) 50%, #000)
+  );
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--ddp-color-primary) 12%, transparent),
+    var(--ddp-elevation-1);
+}
+
+.wordmark {
+  letter-spacing: -0.02em;
+  font-size: 2.5rem;
+}
