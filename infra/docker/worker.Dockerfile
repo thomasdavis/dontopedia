@@ -13,7 +13,7 @@ RUN corepack enable
 WORKDIR /repo
 
 FROM base AS deps
-COPY dontopedia/package.json dontopedia/pnpm-workspace.yaml dontopedia/pnpm-lock.yaml* dontopedia/tsconfig.base.json ./
+COPY dontopedia/package.json dontopedia/pnpm-workspace.yaml dontopedia/pnpm-lock.yaml* dontopedia/.npmrc dontopedia/tsconfig.base.json ./
 COPY dontopedia/apps/web/package.json apps/web/
 COPY dontopedia/apps/agent-runner/package.json apps/agent-runner/
 COPY dontopedia/apps/worker/package.json apps/worker/
