@@ -1,11 +1,15 @@
 import { NextRequest } from "next/server";
 
 /**
- * Proxy SSE stream from agent-runner to the browser so cookies, auth, and
- * the exact origin stay owned by the web app. Kept minimal — the runner is
- * the single source of truth for session events.
+ * Proxy SSE stream from agent-runner to the browser so the runner stays
+ * internal to the compose network. We explicitly tell every intermediary
+ * (Caddy, Cloudflare, Next's own compress middleware) to leave the body
+ * alone — otherwise the event: frames get buffered and the UI looks dead
+ * even when the worker is firing events every few hundred ms.
  */
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const fetchCache = "force-no-store";
 
 export async function GET(
   _req: NextRequest,
@@ -27,6 +31,8 @@ export async function GET(
       "content-type": "text/event-stream",
       "cache-control": "no-cache, no-transform",
       connection: "keep-alive",
+      "x-accel-buffering": "no",
+      "content-encoding": "identity",
     },
   });
 }
