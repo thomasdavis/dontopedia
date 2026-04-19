@@ -211,7 +211,9 @@ export async function assertFacts(input: {
 }): Promise<number> {
   const base = dontosrvBase();
 
-  const uniqueSources = new Set(input.facts.map((f) => f.source.iri));
+  const uniqueSources = new Set(
+    input.facts.filter((f) => f.source?.iri).map((f) => f.source.iri),
+  );
   await Promise.all(
     [...uniqueSources].map((iri) =>
       ensureContext(base, { iri, kind: "source", mode: "permissive" }).catch(() => {
@@ -220,21 +222,70 @@ export async function assertFacts(input: {
     ),
   );
 
-  const statements: AssertInput[] = input.facts.map((f) => ({
-    subject: f.subject,
-    predicate: f.predicate,
-    object_iri: "iri" in f.object ? f.object.iri : null,
-    object_lit: "literal" in f.object ? (f.object.literal as Literal) : null,
-    context: input.context,
-    polarity: f.polarity,
-    maturity: f.maturity,
-    valid_from: f.validFrom ?? null,
-    valid_to: f.validTo ?? null,
-  }));
+  const statements: AssertInput[] = [];
+  let skipped = 0;
+  for (const f of input.facts) {
+    // Extraction may emit malformed shapes when gpt-4.1-mini hallucinates a
+    // literal without `v`. Rather than fail the whole batch on dontosrv's
+    // strict deserializer (422), drop bad rows here and carry on.
+    if (!f.subject || !f.predicate) {
+      skipped++;
+      continue;
+    }
+    if ("iri" in f.object && typeof f.object.iri === "string") {
+      statements.push({
+        subject: f.subject,
+        predicate: f.predicate,
+        object_iri: f.object.iri,
+        object_lit: null,
+        context: input.context,
+        polarity: f.polarity,
+        maturity: f.maturity,
+        valid_from: f.validFrom ?? null,
+        valid_to: f.validTo ?? null,
+      });
+    } else if ("literal" in f.object && f.object.literal?.v !== undefined) {
+      statements.push({
+        subject: f.subject,
+        predicate: f.predicate,
+        object_iri: null,
+        object_lit: {
+          v: f.object.literal.v,
+          dt: f.object.literal.dt || "xsd:string",
+          lang: f.object.literal.lang ?? null,
+        } as Literal,
+        context: input.context,
+        polarity: f.polarity,
+        maturity: f.maturity,
+        valid_from: f.validFrom ?? null,
+        valid_to: f.validTo ?? null,
+      });
+    } else {
+      skipped++;
+    }
+  }
 
+  if (skipped > 0) console.warn(`[assertFacts] skipped ${skipped} malformed facts`);
   if (statements.length === 0) return 0;
-  const res = await assertBatch(base, statements);
-  return res.inserted;
+
+  // Batch first; if dontosrv still 422s for any reason, fall back to
+  // one-by-one so partial insertion still wins.
+  try {
+    const res = await assertBatch(base, statements);
+    return res.inserted;
+  } catch {
+    let n = 0;
+    for (const s of statements) {
+      try {
+        const { assert } = await import("@donto/client/ingest");
+        await assert(base, s);
+        n++;
+      } catch {
+        /* keep going */
+      }
+    }
+    return n;
+  }
 }
 
 function dontosrvBase(): string {
