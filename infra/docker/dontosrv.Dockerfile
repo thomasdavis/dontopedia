@@ -18,5 +18,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/donto/target/release/dontosrv /usr/local/bin/dontosrv
 EXPOSE 7878
-ENV DONTO_BIND=0.0.0.0:7878
-CMD ["/usr/local/bin/dontosrv"]
+# Pass --bind explicitly so the fix works even against older donto builds
+# that hadn't wired DONTO_BIND through clap.
+CMD ["/usr/local/bin/dontosrv", "--bind", "0.0.0.0:7878"]
