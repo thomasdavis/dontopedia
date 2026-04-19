@@ -1,11 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { currentIdentity } from "@/server/auth";
-import { IdentityMenu } from "./IdentityMenu";
 import css from "./topbar.module.css";
 
-export async function TopBar({ children }: { children?: ReactNode }) {
-  const identity = await currentIdentity();
+export function TopBar({ children }: { children?: ReactNode }) {
   return (
     <header className={css.bar}>
       <Link href="/" className={css.brand}>
@@ -21,12 +18,6 @@ export async function TopBar({ children }: { children?: ReactNode }) {
           predicates
         </Link>
       </nav>
-      <div className={css.right}>
-        <IdentityMenu
-          iri={identity.iri}
-          displayName={identity.displayName}
-        />
-      </div>
     </header>
   );
 }

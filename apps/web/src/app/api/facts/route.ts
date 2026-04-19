@@ -1,16 +1,13 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { assert, ensureContext } from "@donto/client/ingest";
-import { currentIdentity } from "@/server/auth";
 
 /**
- * The write endpoint a signed-in (or anonymous) user hits to file a fact.
- * Every assertion goes under the caller's identity context, maturity 0
- * (raw). If they want to back it with a source, they can cite one via
- * `sourceIri` — we ensure the source context exists but don't change the
- * owning context of the fact (donto's paraconsistency means the source's
- * statement would be a sibling, not an overwrite).
+ * Write endpoint for user-filed facts. Fully public, no auth — statements
+ * land in `ctx:public` at maturity 0. Moderation and curation are donto
+ * shapes / rules, not gatekeeping on this endpoint.
  */
+const PUBLIC_CTX = "ctx:public";
 
 const Literal = z.object({
   v: z.union([z.string(), z.number(), z.boolean()]),
@@ -42,11 +39,10 @@ export async function POST(req: NextRequest) {
   if (!parse.success) {
     return Response.json({ error: parse.error.flatten() }, { status: 400 });
   }
-  const identity = await currentIdentity();
   const base = dontosrvBase();
 
   await ensureContext(base, {
-    iri: identity.iri,
+    iri: PUBLIC_CTX,
     kind: "user",
     mode: "permissive",
   }).catch(() => {});
@@ -65,7 +61,7 @@ export async function POST(req: NextRequest) {
       predicate: parse.data.predicate,
       object_iri: parse.data.objectIri ?? null,
       object_lit: parse.data.objectLiteral ?? null,
-      context: identity.iri,
+      context: PUBLIC_CTX,
       polarity: parse.data.polarity,
       maturity: 0,
       valid_from: parse.data.validFrom ?? null,
