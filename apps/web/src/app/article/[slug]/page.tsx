@@ -13,11 +13,11 @@ import {
   slugToIri,
 } from "@dontopedia/sdk";
 import type { Statement } from "@donto/client";
-import { ArticleContextMenu } from "@/components/ArticleContextMenu";
 import { ArticleTabs } from "@/components/ArticleTabs";
 import { ArticleTimeline } from "@/components/ArticleTimeline";
 import { AssertFact } from "@/components/AssertFact";
 import { SearchForm } from "@/components/SearchForm";
+import { SelectionMenu } from "@/components/SelectionMenu";
 import { StartResearchCTA } from "@/components/StartResearchCTA";
 import { TopBar } from "@/components/TopBar";
 import css from "./page.module.css";
@@ -237,8 +237,8 @@ export default async function ArticlePage({
             </nav>
           )}
 
-          <ArticleContextMenu subjectIri={iri} subjectLabel={label}>
-            <div className={css.body} data-hint="right-click any text for actions">
+          <SelectionMenu subjectIri={iri} subjectLabel={label}>
+            <div className={css.body} data-hint="select any text for actions">
               {groups.map((g) => (
                 <PredicateSection
                   key={g.predicate}
@@ -294,7 +294,7 @@ export default async function ArticlePage({
                 </div>
               </PredicateSection>
             </div>
-          </ArticleContextMenu>
+          </SelectionMenu>
         </div>
       </article>
     </main>
