@@ -22,7 +22,10 @@ export const FactSchema = z.object({
   source: z.object({
     iri: z.string(),
     label: z.string(),
-    url: z.string().url().optional(),
+    // `url` is validated as a plain string (OpenAI structured outputs rejects
+    // `format: "uri"` which z.string().url() emits). We sanity-check the
+    // https? prefix downstream if we need to.
+    url: z.string().optional(),
   }),
   confidence: z.number().min(0).max(1).optional(),
   notes: z.string().optional(),
