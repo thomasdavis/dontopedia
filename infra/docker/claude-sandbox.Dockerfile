@@ -20,7 +20,8 @@ FROM node:22-alpine
 RUN apk add --no-cache bash ca-certificates curl git su-exec shadow \
  && npm install -g @anthropic-ai/claude-code \
  && addgroup -S claude \
- && adduser -S -G claude -h /home/claude -s /bin/sh claude
+ && adduser -S -G claude -h /home/claude -s /bin/sh claude \
+ && chmod 0777 /home/claude
 
 COPY dontopedia/infra/docker/claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
 RUN chmod +x /usr/local/bin/claude-entrypoint.sh
