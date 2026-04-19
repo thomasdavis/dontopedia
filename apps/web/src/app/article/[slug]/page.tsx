@@ -7,6 +7,7 @@ import {
   iriLabel,
   slugToIri,
 } from "@dontopedia/sdk";
+import { HoverToResearch } from "@/components/HoverToResearch";
 import { SearchForm } from "@/components/SearchForm";
 import { StartResearchCTA } from "@/components/StartResearchCTA";
 import { TopBar } from "@/components/TopBar";
@@ -71,25 +72,27 @@ export default async function ArticlePage({
           </Stack>
         </header>
 
-        <Stack gap={8}>
-          {groups.map((g) => (
-            <section key={g.predicate} className={css.group}>
-              <PredicateHeader
-                predicate={g.predicate}
-                conflicted={contradictionByPred.has(g.predicate)}
-              />
-              <Stack gap={2}>
-                {g.statements.map((s) => (
-                  <StatementRow
-                    key={s.statement_id}
-                    statement={s}
-                    conflict={contradictionByPred.get(g.predicate)}
-                  />
-                ))}
-              </Stack>
-            </section>
-          ))}
-        </Stack>
+        <HoverToResearch subjectIri={iri} subjectLabel={iriLabel(iri)}>
+          <Stack gap={8}>
+            {groups.map((g) => (
+              <section key={g.predicate} className={css.group}>
+                <PredicateHeader
+                  predicate={g.predicate}
+                  conflicted={contradictionByPred.has(g.predicate)}
+                />
+                <Stack gap={2}>
+                  {g.statements.map((s) => (
+                    <StatementRow
+                      key={s.statement_id}
+                      statement={s}
+                      conflict={contradictionByPred.get(g.predicate)}
+                    />
+                  ))}
+                </Stack>
+              </section>
+            ))}
+          </Stack>
+        </HoverToResearch>
 
         <footer className={css.footer}>
           <Card variant="filled" className={css.footerCard}>

@@ -1,7 +1,8 @@
 name: dontopedia
 
 # Single-host deploy topology. All services share a user-defined bridge so
-# they can reach each other by name; only web and caddy are published.
+# they can reach each other by name; only web, caddy, grafana, and dev ports
+# are published.
 services:
   postgres:
     image: postgres:16-alpine
@@ -67,6 +68,7 @@ services:
     environment:
       DONTOSRV_URL: http://dontosrv:7878
       TEMPORAL_ADDRESS: temporal:7233
+      RUNNER_PUBLIC_URL: http://agent-runner:4001
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       AGENT_RUNNER_MOCK: ${AGENT_RUNNER_MOCK:-0}
     depends_on:
@@ -95,13 +97,16 @@ services:
       dockerfile: infra/docker/web.Dockerfile
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       DONTOSRV_URL: http://dontosrv:7878
       NEXT_PUBLIC_DONTOSRV_URL: ${NEXT_PUBLIC_DONTOSRV_URL:-http://localhost:7878}
       AGENT_RUNNER_URL: http://agent-runner:4001
+      DATABASE_URL: postgres://donto:donto@postgres:5432/donto
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://dontopedia.com}
     depends_on:
       - dontosrv
       - agent-runner
+      - postgres
     ports:
       - "3000:3000"
 
@@ -118,7 +123,66 @@ services:
     depends_on:
       - web
 
+  loki:
+    image: grafana/loki:3.2.0
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-dontopedia}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./observability/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./observability/dash:/etc/grafana/provisioning/dashboards/dash:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+    ports:
+      - "3001:3000"
+
+  backups:
+    build:
+      context: ../../
+      dockerfile: infra/docker/backups.Dockerfile
+    restart: unless-stopped
+    environment:
+      PGURL: postgres://donto:donto@postgres:5432/donto
+      RETAIN_DAYS: ${BACKUP_RETAIN_DAYS:-14}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PREFIX: ${S3_PREFIX:-dontopedia/pg}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - pg-backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
   caddy-data:
   caddy-config:
+  loki-data:
+  grafana-data:
+  pg-backups:

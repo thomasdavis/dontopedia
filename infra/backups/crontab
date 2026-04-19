@@ -1,0 +1,2 @@
+# Nightly dump at 02:17 UTC
+17 2 * * * /usr/local/bin/pg-backup.sh >> /var/log/pg-backup.log 2>&1

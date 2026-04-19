@@ -1,0 +1,30 @@
+.root {
+  position: relative;
+}
+
+.floater {
+  animation: fade-up var(--ddp-duration-normal) var(--ddp-easing-emphasized);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  padding: var(--ddp-space-4);
+}
+
+.quote {
+  font-family: var(--ddp-font-serif);
+  font-style: italic;
+  line-height: 1.5;
+  max-height: 5em;
+  overflow: hidden;
+}

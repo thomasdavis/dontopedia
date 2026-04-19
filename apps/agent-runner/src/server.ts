@@ -1,6 +1,11 @@
 import Fastify from "fastify";
 import { z } from "zod";
-import { startSession, subscribe, type LogEvent } from "./sessions.js";
+import {
+  ingestEvent,
+  startSession,
+  subscribe,
+  type LogEvent,
+} from "./sessions.js";
 
 const fastify = Fastify({
   logger: { level: process.env.LOG_LEVEL ?? "info" },
@@ -10,6 +15,7 @@ const StartBody = z.object({
   query: z.string().min(1),
   subjectIri: z.string().optional(),
   span: z.string().optional(),
+  actor: z.string().optional(),
 });
 
 fastify.post("/research", async (req, reply) => {
@@ -46,6 +52,27 @@ fastify.get<{ Params: { sessionId: string } }>(
         /* noop */
       }
     });
+  },
+);
+
+/** Worker → agent-runner callback for live progress events. Internal only —
+ *  bind to the docker network, do not expose on the public edge. */
+const EventBody = z.object({
+  t: z.number(),
+  kind: z.enum(["log", "step", "extracted", "asserted", "error", "done"]),
+  msg: z.string(),
+  data: z.unknown().optional(),
+});
+
+fastify.post<{ Params: { sessionId: string } }>(
+  "/internal/events/:sessionId",
+  async (req, reply) => {
+    const parse = EventBody.safeParse(req.body);
+    if (!parse.success) {
+      return reply.code(400).send({ error: parse.error.flatten() });
+    }
+    ingestEvent(req.params.sessionId, parse.data);
+    return reply.send({ ok: true });
   },
 );
 

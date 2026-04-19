@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { NativeConnection, Worker } from "@temporalio/worker";
 import { activities } from "./activities.js";
 
@@ -8,11 +10,16 @@ async function main() {
 
   const connection = await NativeConnection.connect({ address });
 
+  // Path to the workflows module — resolved relative to this file so it
+  // works whether we're running via `tsx` (dev) or compiled (prod).
+  const here = dirname(fileURLToPath(import.meta.url));
+  const workflowsPath = resolve(here, "./workflows.ts");
+
   const worker = await Worker.create({
     connection,
     namespace,
     taskQueue,
-    workflowsPath: require.resolve("@dontopedia/workflows/workflows"),
+    workflowsPath,
     activities,
   });
 

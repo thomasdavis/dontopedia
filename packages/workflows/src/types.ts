@@ -5,6 +5,13 @@ export const ResearchInput = z.object({
   query: z.string().min(1),
   subjectIri: z.string().optional(),
   span: z.string().optional(),
+  /** Optional webhook for live progress events — the agent-runner's
+   *  internal ingest URL. Set when the workflow is started from the runner. */
+  callbackUrl: z.string().url().optional(),
+  /** Context this session will assert into. Defaults to ctx:research/<sessionId>. */
+  context: z.string().optional(),
+  /** Optional user IRI doing the research. v1: stamped on every assertion. */
+  actor: z.string().optional(),
 });
 export type ResearchInput = z.infer<typeof ResearchInput>;
 
@@ -37,3 +44,14 @@ export const ExtractedFact = z.object({
   notes: z.string().optional(),
 });
 export type ExtractedFact = z.infer<typeof ExtractedFact>;
+
+export const ProgressEvent = z.object({
+  t: z.number(),
+  kind: z.enum(["log", "step", "extracted", "asserted", "error", "done"]),
+  msg: z.string(),
+  data: z.unknown().optional(),
+});
+export type ProgressEvent = z.infer<typeof ProgressEvent>;
+
+export const TASK_QUEUE = "dontopedia";
+export const WORKFLOW_TYPE = "researchWorkflow";
