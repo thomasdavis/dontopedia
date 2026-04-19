@@ -152,10 +152,11 @@ function buildDockerArgs(image: string, prompt: string, sessionId: string): stri
   // Both paths are on the Docker HOST (the droplet), not inside the worker
   // container — resolved by dockerd at `docker run` time.
   const credsHome = process.env.CLAUDE_CREDS_HOME ?? "/root";
-  // Sandbox image runs as root (uid 0) inside the container so it can
-  // actually read the host's /root/.claude.json (uid 0 on the host).
-  args.push("-v", `${credsHome}/.claude.json:/root/.claude.json:ro`);
-  args.push("-v", `${credsHome}/.claude:/root/.claude:ro`);
+  // Mount host creds read-only under /creds; the sandbox entrypoint copies
+  // them into a writable $HOME so claude can refresh its OAuth token
+  // without hitting EROFS on the bind mount.
+  args.push("-v", `${credsHome}/.claude.json:/creds/.claude.json:ro`);
+  args.push("-v", `${credsHome}/.claude:/creds/.claude:ro`);
   args.push(image, prompt);
   return args;
 }
