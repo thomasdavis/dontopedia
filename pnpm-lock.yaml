@@ -48,6 +48,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@base-ui-components/react':
+        specifier: ^1.0.0-alpha.20
+        version: 1.0.0-rc.0(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@donto/client':
         specifier: file:../../../donto/packages/donto-client
         version: file:../donto/packages/donto-client
