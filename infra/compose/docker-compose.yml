@@ -46,12 +46,17 @@ services:
       POSTGRES_USER: donto
       POSTGRES_PWD: donto
       POSTGRES_SEEDS: postgres
-      DYNAMIC_CONFIG_FILE_PATH: "config/dynamicconfig/development-sql.yaml"
+      # Point at the dynamic-config file we ship in this repo so the
+      # auto-setup image doesn't fail with "config/dynamicconfig/...: no
+      # such file or directory" at startup.
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/dynamicconfig.yaml
+    volumes:
+      - ./temporal/dynamicconfig.yaml:/etc/temporal/dynamicconfig.yaml:ro
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "7233:7233"
+      - "127.0.0.1:7233:7233"
 
   temporal-ui:
     image: temporalio/ui:2.34.0

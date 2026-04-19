@@ -1,0 +1,6 @@
+# Temporal dynamic config. Keeps the server happy in single-host dev/prod
+# without enabling anything non-default. Comprehensive list of keys is in
+# https://docs.temporal.io/references/dynamic-configuration.
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}
