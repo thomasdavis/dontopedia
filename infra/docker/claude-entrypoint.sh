@@ -1,29 +1,29 @@
 #!/bin/sh
-# Copy the host-mounted claude credentials into a writable location inside
-# the container, then exec claude. Claude CLI refreshes its OAuth token on
-# every call, so a :ro bind mount of /root/.claude.json fails with EROFS.
+# Copy the host-mounted Claude credentials into a writable location owned
+# by the 'claude' user, then drop privileges and exec claude.
 #
-# The mounted copies live at /creds/ (read-only); we rewrite a live copy
-# into $HOME. Nothing writes back to the host.
+# Why: Claude CLI refreshes its OAuth token on every call, so a :ro bind
+# mount fails with EROFS. And it refuses --permission-mode bypassPermissions
+# when running as root. Solution:
+#   1. Container starts as root.
+#   2. Entrypoint copies /creds/* into /home/claude/ and chowns to claude.
+#   3. Exec `su claude -c claude --print ...` to drop to uid 100.
 set -eu
 
 if [ -f /creds/.claude.json ]; then
-  cp /creds/.claude.json /root/.claude.json
-  chmod 0600 /root/.claude.json
+  cp /creds/.claude.json /home/claude/.claude.json
 fi
 if [ -d /creds/.claude ]; then
-  cp -r /creds/.claude /root/.claude
+  cp -r /creds/.claude /home/claude/.claude
 fi
+chown -R claude:claude /home/claude
+chmod 0600 /home/claude/.claude.json 2>/dev/null || true
 
-#
-# --permission-mode bypassPermissions: the sandbox is already isolated
-# (cap-drop, memory/pid caps, docker network), so we don't need per-tool
-# prompts. Lets WebSearch / WebFetch / Bash run without interactive approval.
-# --allowed-tools WebSearch WebFetch Bash Read Grep Glob: explicit allowlist
-# so the agent can research but can't Edit or Write (no local writes matter
-# here — it's a throwaway container).
-exec claude \
+# Pass the prompt(s) on as argv to claude. Using --permission-mode
+# bypassPermissions + an explicit allowlist so WebSearch etc run without
+# prompts, but Edit/Write are still denied by omission.
+exec su claude -c "exec claude \
   --print \
   --permission-mode bypassPermissions \
   --allowed-tools WebSearch WebFetch Bash Read Grep Glob \
-  "$@"
+  \"\$@\"" -- sh "$@"
