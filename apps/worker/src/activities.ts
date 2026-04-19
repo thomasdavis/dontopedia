@@ -144,12 +144,16 @@ function buildDockerArgs(image: string, prompt: string, sessionId: string): stri
   if (process.env.ANTHROPIC_API_KEY) {
     args.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
   }
-  // Mount the host's Claude creds directory into the sandbox so sessions
+  // Mount the host's Claude credential state into the sandbox so sessions
   // inherit whatever OAuth state `claude login` set up on the droplet.
-  // CLAUDE_CREDS_HOST is the path on the real Docker host, not inside the
-  // worker container — resolved at `docker run` time by the daemon.
-  const credsHost = process.env.CLAUDE_CREDS_HOST ?? "/root/.claude";
-  args.push("-v", `${credsHost}:/home/claude/.claude:ro`);
+  // Claude CLI keeps state in TWO places:
+  //   ~/.claude.json   — main config + OAuth tokens
+  //   ~/.claude/       — cache, history, agent files
+  // Both paths are on the Docker HOST (the droplet), not inside the worker
+  // container — resolved by dockerd at `docker run` time.
+  const credsHome = process.env.CLAUDE_CREDS_HOME ?? "/root";
+  args.push("-v", `${credsHome}/.claude.json:/home/claude/.claude.json:ro`);
+  args.push("-v", `${credsHome}/.claude:/home/claude/.claude:ro`);
   args.push(image, prompt);
   return args;
 }
