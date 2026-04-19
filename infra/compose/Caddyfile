@@ -16,12 +16,26 @@
 #   - direct browser hits to the droplet IP over HTTP
 #   - LE HTTP-01 challenge if we later flip to DNS-only
 :80 {
-  encode zstd gzip
   log {
     output stdout
     format console
   }
-  reverse_proxy web:3000
+
+  # SSE route — no buffering, no compression, flush on every write. Caddy
+  # will otherwise batch small event: lines together or let the compressor
+  # collect them, which makes the UI look like the worker is silent.
+  @sse path_regexp sse ^/api/research/[^/]+/stream$
+  handle @sse {
+    reverse_proxy web:3000 {
+      flush_interval -1
+    }
+  }
+
+  # Everything else: standard compressed reverse proxy.
+  handle {
+    encode zstd gzip
+    reverse_proxy web:3000
+  }
 }
 
 # --- Optional subdomains (uncomment + add CF A records to light them up) ---
