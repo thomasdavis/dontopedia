@@ -136,6 +136,18 @@ function buildDockerArgs(image: string, prompt: string, sessionId: string): stri
     "256",
     "--cap-drop",
     "ALL",
+    // The entrypoint copies creds into the claude user's home and
+    // switches uid, which needs CHOWN / SETUID / SETGID. DAC_OVERRIDE
+    // lets root write into /home/claude without owning it. These four
+    // are a tiny surface area compared to the default cap set.
+    "--cap-add",
+    "CHOWN",
+    "--cap-add",
+    "DAC_OVERRIDE",
+    "--cap-add",
+    "SETUID",
+    "--cap-add",
+    "SETGID",
     "--security-opt",
     "no-new-privileges",
     "-e",
