@@ -122,7 +122,7 @@ export default async function ArticlePage({
 
   // Fetch history including retracted rows for the toggle feature.
   const history = await dpClient()
-    .history(iri, { limit: 500, include_retracted: true })
+    .history(iri, { limit: 5000, include_retracted: true })
     .catch(() => null);
 
   if (!history || history.rows.length === 0) {
