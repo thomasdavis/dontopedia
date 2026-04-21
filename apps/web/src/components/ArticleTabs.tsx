@@ -4,11 +4,11 @@ import css from "./article-tabs.module.css";
 
 /**
  * Wikipedia-style right-aligned article tabs driven by anchor jumps.
- * "Article" is the default (whole page). Clicking "Talk" is a placeholder
- * — once we add a per-subject discussion feed it'll route to a sibling
- * page. "Timeline" / "References" scroll within the article.
+ * "Article" is the default (whole page). "View history" links to the
+ * dedicated history sub-page. "Timeline" / "References" scroll within
+ * the article.
  */
-export function ArticleTabs() {
+export function ArticleTabs({ slug }: { slug?: string }) {
   return (
     <Tabs.Root defaultValue="article" className={css.tabs}>
       <Tabs.List className={css.list}>
@@ -37,6 +37,15 @@ export function ArticleTabs() {
         >
           References
         </Tabs.Tab>
+        {slug && (
+          <Tabs.Tab
+            value="history"
+            className={css.tab}
+            onClick={() => { window.location.href = `/article/${slug}/history`; }}
+          >
+            View history
+          </Tabs.Tab>
+        )}
       </Tabs.List>
     </Tabs.Root>
   );

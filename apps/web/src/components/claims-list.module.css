@@ -1,0 +1,99 @@
+.claims {
+  list-style: none;
+  padding-left: 1.6em;
+  margin: 0 0 var(--ddp-space-3) 0;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+
+.claim {
+  padding: 1px 0;
+  color: #202122;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
+}
+
+.claim[data-polarity="negated"] .claimObj {
+  text-decoration: line-through;
+  color: #b32424;
+}
+.claim[data-kind="hypothesis"] {
+  background: #f3ecff;
+  border-left: 3px solid #6750a4;
+  padding-left: 6px;
+  margin-left: -9px;
+}
+.claim[data-kind="derived"]::marker {
+  color: #006a66;
+}
+.claim a {
+  color: #0645ad;
+  text-decoration: none;
+}
+.claim a:hover { text-decoration: underline; }
+
+/* Maturity dot bullet replaces disc */
+.maturityDot {
+  position: absolute;
+  left: -1.2em;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.maturityDot[data-maturity="0"] { background: #a2a9b1; }
+.maturityDot[data-maturity="1"] { background: #0645ad; }
+.maturityDot[data-maturity="2"] { background: #14866d; }
+.maturityDot[data-maturity="3"] { background: #b8860b; }
+.maturityDot[data-maturity="4"] { background: #6750a4; }
+
+.claimObj { color: #202122; }
+.neg {
+  color: #b32424;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+.claimMeta {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.75rem;
+  color: #72777d;
+  margin-left: 4px;
+}
+
+.cite {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.6875rem;
+  color: #0645ad;
+  text-decoration: none;
+  padding: 0 1px;
+}
+.cite:hover { text-decoration: underline; }
+
+/* Retracted styling */
+.retracted {
+  opacity: 0.6;
+}
+.retracted .claimObj {
+  text-decoration: line-through;
+}
+
+.retractedLabel {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.6875rem;
+  color: #b32424;
+  background: #fee7e6;
+  border: 1px solid #f6c5c4;
+  border-radius: 2px;
+  padding: 0 5px;
+  margin-left: 6px;
+  white-space: nowrap;
+}

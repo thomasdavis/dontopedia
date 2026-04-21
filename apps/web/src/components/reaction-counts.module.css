@@ -1,0 +1,19 @@
+.counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.6875rem;
+  vertical-align: middle;
+}
+
+.up {
+  color: #14866d;
+  font-weight: 600;
+}
+
+.down {
+  color: #b32424;
+  font-weight: 600;
+}

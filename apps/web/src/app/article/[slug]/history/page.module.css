@@ -1,0 +1,116 @@
+.page {
+  padding-bottom: var(--ddp-space-16);
+}
+
+.container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--ddp-space-5) var(--ddp-space-6) 0;
+  background: var(--ddp-color-background);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.875rem;
+  color: #202122;
+}
+
+.title {
+  font-family: "Linux Libertine", "Georgia", "Times", serif;
+  font-weight: 400;
+  font-size: 1.75rem;
+  line-height: 1.25;
+  margin: 0 0 4px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #a2a9b1;
+  color: #000;
+}
+
+.subtitle {
+  font-size: 0.8125rem;
+  color: #54595d;
+  margin: 0 0 var(--ddp-space-4) 0;
+}
+
+.link {
+  color: #0645ad;
+  text-decoration: none;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+.retractedSample {
+  text-decoration: line-through;
+  color: #b32424;
+}
+
+.daySection {
+  margin-top: var(--ddp-space-5);
+}
+
+.dayTitle {
+  font-family: "Linux Libertine", "Georgia", "Times", serif;
+  font-weight: 400;
+  font-size: 1.25rem;
+  margin: 0 0 var(--ddp-space-2) 0;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #eaecf0;
+  color: #000;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.table th {
+  text-align: left;
+  font-weight: 600;
+  color: #54595d;
+  padding: 4px 8px;
+  border-bottom: 1px solid #a2a9b1;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eaecf0;
+  vertical-align: top;
+}
+
+.thPred { width: 16%; }
+.thObj { width: 28%; }
+.thCtx { width: 16%; }
+.thTx { width: 22%; }
+.thValid { width: 18%; }
+
+.pred { font-weight: 500; }
+.ctx {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.6875rem;
+  color: #54595d;
+}
+.tx, .valid {
+  font-size: 0.75rem;
+  color: #54595d;
+}
+.neg {
+  color: #b32424;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+
+.retracted td {
+  text-decoration: line-through;
+  color: #72777d;
+}
+
+.retractedAt {
+  display: block;
+  text-decoration: none;
+  font-size: 0.6875rem;
+  color: #b32424;
+  font-style: italic;
+}

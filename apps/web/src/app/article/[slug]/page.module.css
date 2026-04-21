@@ -267,52 +267,7 @@
   line-height: 1.6;
 }
 
-.claims {
-  list-style: disc;
-  padding-left: 1.6em;
-  margin: 0 0 var(--ddp-space-3) 0;
-  font-size: 0.9375rem;
-  line-height: 1.75;
-}
-.claim {
-  padding: 1px 0;
-  color: #202122;
-}
-.claim[data-polarity="negated"] .claimObj {
-  text-decoration: line-through;
-  color: #b32424;
-}
-.claim[data-kind="hypothesis"] {
-  background: #f3ecff;
-  border-left: 3px solid #6750a4;
-  padding-left: 6px;
-  margin-left: -9px;
-}
-.claim[data-kind="derived"]::marker {
-  color: #006a66;
-}
-.claim a {
-  color: #0645ad;
-  text-decoration: none;
-}
-.claim a:hover { text-decoration: underline; }
-
-.claimObj { color: #202122; }
-.neg {
-  color: #b32424;
-  font-family: var(--ddp-font-sans);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-right: 4px;
-}
-.claimMeta {
-  font-family: var(--ddp-font-sans);
-  font-size: 0.75rem;
-  color: #72777d;
-  margin-left: 8px;
-}
+/* Claims are now rendered by the ClaimsList client component — see claims-list.module.css */
 
 .cite {
   font-family: var(--ddp-font-sans);
@@ -400,4 +355,75 @@
   font-family: var(--ddp-font-mono);
   font-size: 0.75rem;
   color: #54595d;
+}
+
+/* Toolbar: retracted toggle + maturity legend */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ddp-space-3);
+  margin: var(--ddp-space-3) 0;
+  padding: 6px 0;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.maturityLegend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.6875rem;
+  color: #72777d;
+}
+
+.legendDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+}
+.legendDot[data-maturity="0"] { background: #a2a9b1; }
+.legendDot[data-maturity="1"] { background: #0645ad; }
+.legendDot[data-maturity="2"] { background: #14866d; }
+.legendDot[data-maturity="3"] { background: #b8860b; }
+.legendDot[data-maturity="4"] { background: #6750a4; }
+.legendDot:first-child { margin-left: 0; }
+
+/* Reference kind badge */
+.refKind {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #54595d;
+  background: #eaecf0;
+  border-radius: 2px;
+  padding: 1px 5px;
+  margin: 0 6px;
+}
+
+/* See Also section */
+.seeAlso {
+  column-count: 2;
+  column-gap: 2em;
+  list-style: disc;
+  padding-left: 1.6em;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+@media (max-width: 560px) {
+  .seeAlso { column-count: 1; }
+}
+.seeAlso li {
+  break-inside: avoid;
+}
+.seeAlso a {
+  color: #0645ad;
+  text-decoration: none;
+}
+.seeAlso a:hover {
+  text-decoration: underline;
 }
