@@ -5,6 +5,7 @@ import { Dialog } from "@base-ui-components/react/dialog";
 import type { Statement, StatementDetail } from "@donto/client";
 import {
   classifyContext,
+  contextHref,
   formatObject,
   iriLabel,
   iriToSlug,
@@ -161,6 +162,10 @@ export function StatementDrawer() {
 function StatementHead({ stmt }: { stmt: Statement }) {
   const obj = formatObject(stmt);
   const kind = classifyContext(stmt.context);
+  const baseCtxHref = contextHref(stmt.context);
+  const ctxHref = stmt.context.startsWith("ctx:research/") && baseCtxHref
+    ? `${baseCtxHref}?subject=${encodeURIComponent(iriToSlug(stmt.subject))}`
+    : baseCtxHref;
   return (
     <header className={css.head}>
       <div className={css.ids}>
@@ -182,9 +187,17 @@ function StatementHead({ stmt }: { stmt: Statement }) {
       <dl className={css.meta}>
         <dt>Context</dt>
         <dd>
-          <span className={css.ctxTag} data-kind={kind}>
-            {prettifyContext(stmt.context)}
-          </span>
+          {ctxHref ? (
+            <Link href={ctxHref as any} className={css.ctxLink}>
+              <span className={css.ctxTag} data-kind={kind}>
+                {prettifyContext(stmt.context)}
+              </span>
+            </Link>
+          ) : (
+            <span className={css.ctxTag} data-kind={kind}>
+              {prettifyContext(stmt.context)}
+            </span>
+          )}
           <code className={css.mono}>{stmt.context}</code>
         </dd>
         <dt>Polarity</dt>

@@ -29,7 +29,7 @@ fastify.post("/research", async (req, reply) => {
 
 fastify.get<{ Params: { sessionId: string } }>(
   "/research/:sessionId/stream",
-  (req, reply) => {
+  async (req, reply) => {
     const { sessionId } = req.params;
     // Fastify v5 buffers `reply.raw.write` until the handler promise settles
     // unless we explicitly hijack the socket. Without this, SSE events sit
@@ -62,7 +62,7 @@ fastify.get<{ Params: { sessionId: string } }>(
       }
     }, 20_000);
 
-    const unsubscribe = subscribe(sessionId, send);
+    const unsubscribe = await subscribe(sessionId, send);
 
     req.raw.on("close", () => {
       clearInterval(keepalive);
@@ -92,7 +92,7 @@ fastify.post<{ Params: { sessionId: string } }>(
     if (!parse.success) {
       return reply.code(400).send({ error: parse.error.flatten() });
     }
-    ingestEvent(req.params.sessionId, parse.data);
+    await ingestEvent(req.params.sessionId, parse.data);
     return reply.send({ ok: true });
   },
 );

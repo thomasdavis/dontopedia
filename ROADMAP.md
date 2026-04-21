@@ -15,7 +15,7 @@
 - [x] donto: `/contexts/ensure`, `/assert`, `/assert/batch`, `/retract`,
       `/predicates`, `/contexts` routes
 - [x] Temporal wiring: agent-runner starts `researchWorkflow`; worker
-      drives `runClaudeResearch → extractFacts → assertFacts` with live
+      drives `runResearchAgent → extractFacts → assertFacts` with live
       SSE progress via HTTP callback
 - [x] gpt-4.1-mini extraction with OpenAI structured outputs + Zod
 - [x] Hover-to-research primitive — select any prose, pop a research panel
@@ -29,8 +29,8 @@
 - [x] `/predicates` registry browser — every predicate + usage count
 - [x] `/recent` activity lens — contexts grouped by kind (research /
       people / sources / hypotheses)
-- [x] **Sandboxed Claude execution** — worker spawns a sibling
-      `claude-sandbox` container per session via `/var/run/docker.sock`
+- [x] **Sandboxed research-agent execution** — worker spawns a sibling
+      `codex-sandbox` container per session via `/var/run/docker.sock`
       with dropped caps, memory + pid caps, network scoped to the
       compose bridge. Host-spawn fallback for dev.
 - [x] Observability: Loki + Promtail + Grafana with prewired dashboard

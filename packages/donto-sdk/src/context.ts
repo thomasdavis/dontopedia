@@ -22,6 +22,16 @@ export function contextLabel(iri: string): string {
   return slash < 0 ? iri : iri.slice(slash + 1);
 }
 
+export function contextHref(iri: string): string | null {
+  if (iri.startsWith("ctx:research/")) {
+    return `/research/${encodeURIComponent(iri.slice("ctx:research/".length))}`;
+  }
+  if (iri.startsWith("ctx:src/")) {
+    return `/source/${encodeURIComponent(iri.slice("ctx:src/".length))}`;
+  }
+  return null;
+}
+
 /** Maturity ladder (PRD §2). Kept here so UI strings live with the domain. */
 export const MATURITY_LABELS: Record<number, string> = {
   0: "raw",

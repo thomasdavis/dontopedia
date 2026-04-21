@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge, Card, Heading, Stack, Text } from "@dontopedia/ui";
-import { classifyContext, contextLabel, dpClient } from "@dontopedia/sdk";
+import { classifyContext, contextHref, contextLabel, dpClient } from "@dontopedia/sdk";
 import { SearchForm } from "@/components/SearchForm";
 import { TopBar } from "@/components/TopBar";
 import css from "./page.module.css";
@@ -86,29 +86,47 @@ function Section({
       ) : (
         <div className={css.grid}>
           {rows.slice(0, 60).map((r) => (
-            <Card
-              key={r.context}
-              variant="outlined"
-              interactive
-              className={css.card}
-            >
-              <Stack gap={2}>
-                <Stack direction="row" gap={2} align="center" justify="between">
-                  <Badge tone={toneFor(r.context)}>{r.kind}</Badge>
-                  <Badge tone="neutral">{r.count}</Badge>
-                </Stack>
-                <Text variant="mono" muted className={css.iri}>
-                  {r.context}
-                </Text>
-                <Text variant="bodySm" className={css.label}>
-                  {contextLabel(r.context)}
-                </Text>
-              </Stack>
-            </Card>
+            <ContextCard key={r.context} row={r} />
           ))}
         </div>
       )}
     </Stack>
+  );
+}
+
+function ContextCard({
+  row,
+}: {
+  row: { context: string; kind: string; mode: string; count: number };
+}) {
+  const href = contextHref(row.context);
+  const card = (
+    <Card
+      variant="outlined"
+      interactive={!!href}
+      className={css.card}
+    >
+      <Stack gap={2}>
+        <Stack direction="row" gap={2} align="center" justify="between">
+          <Badge tone={toneFor(row.context)}>{row.kind}</Badge>
+          <Badge tone="neutral">{row.count}</Badge>
+        </Stack>
+        <Text variant="mono" muted className={css.iri}>
+          {row.context}
+        </Text>
+        <Text variant="bodySm" className={css.label}>
+          {contextLabel(row.context)}
+        </Text>
+      </Stack>
+    </Card>
+  );
+
+  if (!href) return card;
+
+  return (
+    <Link href={href as any} className={css.cardLink}>
+      {card}
+    </Link>
   );
 }
 

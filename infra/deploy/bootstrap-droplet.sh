@@ -7,7 +7,7 @@
 # substitutes them before this script runs):
 #   DONTOPEDIA_OPENAI_API_KEY   — seeded into /srv/dontopedia/.env
 #
-# Everything else the operator fills in afterwards (claude login via OAuth;
+# Everything else the operator fills in afterwards (codex login via OAuth;
 # any S3 backup creds if wanted).
 set -euo pipefail
 
@@ -29,10 +29,10 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 apt-get update -y
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-log "installing node + claude code cli (for interactive login on host)"
+log "installing node + codex cli (for interactive login on host)"
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
-npm install -g @anthropic-ai/claude-code
+npm install -g @openai/codex
 
 log "firewall"
 ufw --force reset
@@ -67,9 +67,9 @@ sed -i -e 's#^NEXT_PUBLIC_SITE_URL=.*#NEXT_PUBLIC_SITE_URL=https://dontopedia.co
 
 log "bringing up postgres + dontosrv + temporal + web + caddy + obs + backups"
 cd /srv/dontopedia/infra/compose
-# Worker intentionally started last — it relies on claude login having run,
+# Worker intentionally started last — it relies on codex login having run,
 # and we want the rest of the stack hot so the operator can log in and see
-# the site already responding before they OAuth Claude.
+# the site already responding before they auth Codex.
 docker compose --env-file ../../.env up -d --build \
   postgres dontosrv temporal temporal-ui web caddy loki promtail grafana backups agent-runner
 
@@ -78,10 +78,10 @@ cat <<'EOF'
 
 [bootstrap] next steps (interactive — you do these on the droplet):
 
-  # 1. Auth Claude Code (browser OAuth, one-time):
-  claude login
+  # 1. Auth Codex (browser OAuth, one-time):
+  codex login
 
-  # 2. Start the worker now that Claude is authed:
+  # 2. Start the worker now that Codex is authed:
   cd /srv/dontopedia/infra/compose
   docker compose --env-file ../../.env up -d --build worker
 

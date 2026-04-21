@@ -148,6 +148,12 @@
   background: color-mix(in oklab, var(--ddp-color-accent-derived) 18%, transparent);
   color: var(--ddp-color-accent-derived);
 }
+.ctxLink {
+  text-decoration: none;
+}
+.ctxLink:hover .ctxTag {
+  text-decoration: underline;
+}
 
 .facet {
   display: flex;

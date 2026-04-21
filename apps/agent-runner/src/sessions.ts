@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { Client, Connection } from "@temporalio/client";
 import { TASK_QUEUE, WORKFLOW_TYPE } from "@dontopedia/workflows";
 
@@ -22,6 +24,18 @@ interface Session {
 }
 
 const sessions = new Map<string, Session>();
+const persistQueue = new Map<string, Promise<void>>();
+const sessionStoreDir = process.env.AGENT_RUNNER_STORE_DIR ?? "/data/sessions";
+
+interface PersistedSession {
+  id: string;
+  query: string;
+  subjectIri?: string;
+  span?: string;
+  events: LogEvent[];
+  finished: boolean;
+  workflowId?: string;
+}
 
 let _client: Client | null | "unset" = "unset";
 let _clientPromise: Promise<Client | null> | null = null;
@@ -42,6 +56,67 @@ function temporalClient(): Promise<Client | null> {
     }
   })();
   return _clientPromise;
+}
+
+function toPersistedSession(session: Session): PersistedSession {
+  return {
+    id: session.id,
+    query: session.query,
+    subjectIri: session.subjectIri,
+    span: session.span,
+    events: [...session.events],
+    finished: session.finished,
+    workflowId: session.workflowId,
+  };
+}
+
+function hydrateSession(data: PersistedSession): Session {
+  return {
+    ...data,
+    emitter: new EventEmitter(),
+  };
+}
+
+function sessionFile(sessionId: string): string {
+  return join(sessionStoreDir, `${sessionId}.json`);
+}
+
+async function writeSessionSnapshot(snapshot: PersistedSession): Promise<void> {
+  await mkdir(sessionStoreDir, { recursive: true });
+  const file = sessionFile(snapshot.id);
+  const tmp = `${file}.tmp`;
+  await writeFile(tmp, JSON.stringify(snapshot, null, 2), "utf8");
+  await rename(tmp, file);
+}
+
+function schedulePersist(session: Session): void {
+  const previous = persistQueue.get(session.id) ?? Promise.resolve();
+  const next = previous
+    .catch(() => {})
+    .then(() => writeSessionSnapshot(toPersistedSession(session)))
+    .catch(() => {});
+  persistQueue.set(session.id, next);
+  void next.finally(() => {
+    if (persistQueue.get(session.id) === next) persistQueue.delete(session.id);
+  });
+}
+
+async function loadPersistedSession(sessionId: string): Promise<Session | null> {
+  try {
+    const raw = await readFile(sessionFile(sessionId), "utf8");
+    return hydrateSession(JSON.parse(raw) as PersistedSession);
+  } catch {
+    return null;
+  }
+}
+
+async function getSession(sessionId: string): Promise<Session | null> {
+  const inMemory = sessions.get(sessionId);
+  if (inMemory) return inMemory;
+  const persisted = await loadPersistedSession(sessionId);
+  if (!persisted) return null;
+  sessions.set(sessionId, persisted);
+  return persisted;
 }
 
 export async function startSession(input: {
@@ -65,6 +140,7 @@ export async function startSession(input: {
   push(session, { kind: "step", msg: `starting research: "${input.query}"` });
   if (input.subjectIri) push(session, { kind: "log", msg: `subject: ${input.subjectIri}` });
   if (input.span) push(session, { kind: "log", msg: `span: ${input.span}` });
+  schedulePersist(session);
 
   const callbackUrl = process.env.RUNNER_PUBLIC_URL ?? "http://agent-runner:4001";
   const mock = process.env.AGENT_RUNNER_MOCK === "1";
@@ -111,16 +187,21 @@ export async function startSession(input: {
   return sessionId;
 }
 
-export function subscribe(
+export async function subscribe(
   sessionId: string,
   onEvent: (ev: LogEvent) => void,
-): () => void {
-  const s = sessions.get(sessionId);
+): Promise<() => void> {
+  const s = await getSession(sessionId);
   if (!s) {
     onEvent({
       t: Date.now(),
-      kind: "error",
-      msg: `unknown session: ${sessionId}`,
+      kind: "log",
+      msg: `no persisted agent log was found for session ${sessionId}`,
+    });
+    onEvent({
+      t: Date.now(),
+      kind: "done",
+      msg: "showing stored facts only",
     });
     return () => {};
   }
@@ -131,11 +212,12 @@ export function subscribe(
   return () => s.emitter.off("event", handler);
 }
 
-export function ingestEvent(sessionId: string, ev: LogEvent): void {
-  const s = sessions.get(sessionId);
+export async function ingestEvent(sessionId: string, ev: LogEvent): Promise<void> {
+  const s = await getSession(sessionId);
   if (!s) return;
   s.events.push(ev);
   s.emitter.emit("event", ev);
+  schedulePersist(s);
   if (ev.kind === "done") finish(s);
 }
 
@@ -143,12 +225,14 @@ function push(s: Session, partial: Omit<LogEvent, "t">): void {
   const ev: LogEvent = { t: Date.now(), ...partial };
   s.events.push(ev);
   s.emitter.emit("event", ev);
+  schedulePersist(s);
 }
 
 function finish(s: Session): void {
   if (s.finished) return;
   s.finished = true;
   s.emitter.emit("event", { t: Date.now(), kind: "done", msg: "session ended" });
+  schedulePersist(s);
   setTimeout(() => sessions.delete(s.id), 60 * 60 * 1000).unref();
 }
 

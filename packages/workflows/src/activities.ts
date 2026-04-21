@@ -6,7 +6,7 @@ export interface ResearchTranscript {
   raw: string;
 }
 
-export type RunClaudeResearch = (input: ResearchInput) => Promise<ResearchTranscript>;
+export type RunResearchAgent = (input: ResearchInput) => Promise<ResearchTranscript>;
 export type ExtractFacts = (input: {
   transcript: ResearchTranscript;
   sessionId: string;
@@ -22,7 +22,7 @@ export type EmitProgress = (
   event: ProgressEvent,
 ) => Promise<void>;
 
-export declare const runClaudeResearch: RunClaudeResearch;
+export declare const runResearchAgent: RunResearchAgent;
 export declare const extractFacts: ExtractFacts;
 export declare const ensureResearchContext: EnsureResearchContext;
 export declare const assertFacts: AssertFacts;

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   classifyContext,
+  contextHref,
   dpClient,
   findContradictions,
   formatObject,
@@ -243,12 +244,9 @@ export default async function ArticlePage({
   }
   void inbound;
 
-  // --- Feature 3: Source URL resolution ---
-  // --- Feature 3: Source URL resolution ---
-  // Fetch ALL ctx:src/* subjects that have hasUrl facts. These are the
-  // external citations that research sessions discovered. We display them
-  // as clickable hyperlinks in the References section regardless of which
-  // research context the article's facts actually live under.
+  // Resolve metadata only for source contexts that are directly referenced by
+  // the current article's live facts. Pulling every ctx:src/* into refs makes
+  // unrelated articles inherit sources from the same research session.
   let sourceContexts = new Map<string, { kind: string; mode: string; count: number }>();
   const sourceUrls = new Map<string, string>();
   const sourceNames = new Map<string, string>();
@@ -257,31 +255,24 @@ export default async function ArticlePage({
     for (const c of ctxRes.contexts) {
       sourceContexts.set(c.context, { kind: c.kind, mode: c.mode, count: c.count });
     }
-    // Scan every ctx:src/* context that exists in donto for hasUrl/name.
-    // This is O(sources) queries — fine for <100 sources; if it gets big,
-    // dontosrv should expose a batch lookup.
-    const srcCtxs = ctxRes.contexts
-      .filter((c) => c.context.startsWith("ctx:src/") || c.context.startsWith("ctx:src-"))
-      .slice(0, 50);
+    const srcCtxs = [...refs.keys()].filter(
+      (ctx) => ctx.startsWith("ctx:src/") || ctx.startsWith("ctx:src-"),
+    );
     await Promise.all(
       srcCtxs.map(async (c) => {
         try {
-          const h = await dpClient().history(c.context, { limit: 10, include_retracted: false });
+          const h = await dpClient().history(c, { limit: 10, include_retracted: false });
           for (const row of h.rows) {
             if (row.predicate === "hasUrl" && row.object_lit?.v) {
-              sourceUrls.set(c.context, String(row.object_lit.v));
+              sourceUrls.set(c, String(row.object_lit.v));
             }
             if (row.predicate === "name" && row.object_lit?.v) {
-              sourceNames.set(c.context, String(row.object_lit.v));
+              sourceNames.set(c, String(row.object_lit.v));
             }
           }
         } catch { /* non-fatal */ }
       }),
     );
-    // Add source URLs to the refs map so they appear in References.
-    for (const [ctx] of sourceUrls) {
-      if (!refs.has(ctx)) refs.set(ctx, refs.size + 1);
-    }
   } catch {
     // Non-fatal.
   }
@@ -369,7 +360,7 @@ export default async function ArticlePage({
                 <strong>{label}</strong>{" "}
                 <span className={css.muted}>
                   has {current.length} fact{current.length === 1 ? "" : "s"} recorded in
-                  Dontopedia across {refs.size} cited source{refs.size === 1 ? "" : "s"}
+                  Dontopedia across {refs.size} reference{refs.size === 1 ? "" : "s"}
                   {contradictions.length > 0 && (
                     <>, with {contradictions.length} live disagreement{contradictions.length === 1 ? "" : "s"}</>
                   )}
@@ -469,19 +460,14 @@ export default async function ArticlePage({
                       {[...refs.entries()].map(([ctx, n]) => {
                         const meta = sourceContexts.get(ctx);
                         const url = sourceUrls.get(ctx);
+                        const baseLocalHref = contextHref(ctx);
+                        const localHref = ctx.startsWith("ctx:research/") && baseLocalHref
+                          ? `${baseLocalHref}?subject=${encodeURIComponent(slug)}`
+                          : baseLocalHref;
                         const name = sourceNames.get(ctx) ?? prettifyContext(ctx);
-                        const isDoc = ctx.startsWith("ctx:src/doc-");
-                        const docSlug = isDoc ? ctx.replace("ctx:src/", "") : null;
                         return (
                           <li key={ctx} id={`ref-${n}`}>
-                            {isDoc && docSlug ? (
-                              <Link
-                                href={`/source/${docSlug}` as any}
-                                className={css.refLink}
-                              >
-                                {"\u{1f4ce}"} {name}
-                              </Link>
-                            ) : url ? (
+                            {url ? (
                               <a
                                 href={url}
                                 target="_blank"
@@ -491,7 +477,18 @@ export default async function ArticlePage({
                                 {name}
                               </a>
                             ) : (
-                              <span className={css.refLabel}>{name}</span>
+                              localHref ? (
+                                <Link href={localHref as any} className={css.refInternalLink}>
+                                  {name}
+                                </Link>
+                              ) : (
+                                <span className={css.refLabel}>{name}</span>
+                              )
+                            )}
+                            {localHref && url && (
+                              <Link href={localHref as any} className={css.refContextLink}>
+                                view context
+                              </Link>
                             )}
                             {meta && (
                               <span className={css.refKind}>{meta.kind}</span>

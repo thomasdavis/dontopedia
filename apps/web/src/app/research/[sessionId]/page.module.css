@@ -10,3 +10,70 @@
   flex-direction: column;
   gap: var(--ddp-space-8);
 }
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-4);
+}
+
+.backLink {
+  color: var(--ddp-color-primary);
+  text-decoration: none;
+  font-family: var(--ddp-font-sans);
+  font-size: 0.875rem;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.empty {
+  margin: 0;
+  color: var(--ddp-color-on-surface-variant);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.875rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--ddp-color-outline-variant);
+  border-radius: var(--ddp-radius-md);
+  background: var(--ddp-color-surface);
+}
+
+.factsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.factsTable th,
+.factsTable td {
+  padding: var(--ddp-space-3);
+  border-bottom: 1px solid var(--ddp-color-outline-variant);
+  text-align: left;
+  vertical-align: top;
+}
+
+.factsTable th {
+  font-family: var(--ddp-font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ddp-color-on-surface-variant);
+  background: var(--ddp-color-surface-container);
+}
+
+.factsTable td a {
+  color: var(--ddp-color-primary);
+  text-decoration: none;
+}
+
+.factsTable td a:hover {
+  text-decoration: underline;
+}
+
+.factsTable tbody tr:last-child td {
+  border-bottom: none;
+}

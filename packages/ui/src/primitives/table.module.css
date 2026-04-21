@@ -1,0 +1,217 @@
+/* ── Table ─────────────────────────────────────────────────────────────
+ * Wikipedia-inspired data table with sorting, filtering, pagination.
+ * Uses design tokens from global.css throughout.
+ * ────────────────────────────────────────────────────────────────────── */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-3);
+  font-family: var(--ddp-font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ddp-color-on-surface);
+}
+
+/* ── Toolbar (filter input) ──────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ddp-space-3);
+}
+
+.filterInput {
+  max-width: 320px;
+}
+
+/* ── Scroll wrapper ──────────────────────────────────────────────────── */
+
+.scrollWrap {
+  overflow-x: auto;
+  border: 1px solid #a2a9b1;
+  border-radius: var(--ddp-radius-sm);
+}
+
+/* ── Table element ───────────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.thead {
+  background: #eaecf0;
+}
+
+.stickyHeader .thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.th {
+  padding: var(--ddp-space-2) var(--ddp-space-3);
+  border-bottom: 1px solid #a2a9b1;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+  vertical-align: bottom;
+}
+
+.thSortable {
+  cursor: pointer;
+}
+
+.thSortable:hover {
+  background: #dde0e4;
+}
+
+.thContent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ddp-space-1);
+}
+
+.sortArrow {
+  display: inline-block;
+  font-size: 0.6875rem;
+  line-height: 1;
+  opacity: 0.35;
+  transition: opacity var(--ddp-duration-fast) var(--ddp-easing-standard);
+}
+
+.sortArrowActive {
+  opacity: 1;
+}
+
+/* ── Column resize handle ────────────────────────────────────────────── */
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.resizeHandle:hover,
+.resizeHandleActive {
+  background: var(--ddp-color-primary);
+  opacity: 0.3;
+}
+
+/* ── Body ────────────────────────────────────────────────────────────── */
+
+.tbody tr {
+  border-bottom: 1px solid #a2a9b1;
+}
+
+.tbody tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.tbody tr:hover {
+  background: #eaf3ff;
+}
+
+.td {
+  padding: var(--ddp-space-2) var(--ddp-space-3);
+  vertical-align: top;
+  word-break: break-word;
+}
+
+/* ── Checkbox column ─────────────────────────────────────────────────── */
+
+.checkCol {
+  width: 36px;
+  text-align: center;
+  padding-left: var(--ddp-space-2);
+  padding-right: var(--ddp-space-2);
+}
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--ddp-color-primary);
+  cursor: pointer;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+
+.empty {
+  padding: var(--ddp-space-10) var(--ddp-space-4);
+  text-align: center;
+  color: var(--ddp-color-on-surface-variant);
+  font-style: italic;
+}
+
+/* ── Pagination ──────────────────────────────────────────────────────── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ddp-space-3);
+  font-size: 0.8125rem;
+  color: var(--ddp-color-on-surface-variant);
+}
+
+.pageInfo {
+  white-space: nowrap;
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: var(--ddp-space-2);
+}
+
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  .scrollWrap {
+    border-color: var(--ddp-color-outline-variant);
+  }
+
+  .thead {
+    background: var(--ddp-color-surface-container-high);
+  }
+
+  .th {
+    border-bottom-color: var(--ddp-color-outline-variant);
+  }
+
+  .thSortable:hover {
+    background: var(--ddp-color-surface-container-highest);
+  }
+
+  .tbody tr {
+    border-bottom-color: var(--ddp-color-outline-variant);
+  }
+
+  .tbody tr:nth-child(even) {
+    background: var(--ddp-color-surface-container);
+  }
+
+  .tbody tr:nth-child(odd) {
+    background: var(--ddp-color-surface);
+  }
+
+  .tbody tr:hover {
+    background: var(--ddp-color-surface-container-highest);
+  }
+}

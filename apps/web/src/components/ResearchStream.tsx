@@ -12,10 +12,11 @@ interface LogEvent {
 
 export function ResearchStream({ sessionId }: { sessionId: string }) {
   const [events, setEvents] = useState<LogEvent[]>([]);
-  const [status, setStatus] = useState<"connecting" | "open" | "closed" | "error">(
-    "connecting",
-  );
+  const [status, setStatus] = useState<
+    "connecting" | "open" | "closed" | "error" | "stored"
+  >("connecting");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const eventCountRef = useRef(0);
 
   useEffect(() => {
     const url = `/api/research/${encodeURIComponent(sessionId)}/stream`;
@@ -23,13 +24,14 @@ export function ResearchStream({ sessionId }: { sessionId: string }) {
 
     es.onopen = () => setStatus("open");
     es.onerror = () => {
-      setStatus("error");
+      setStatus(eventCountRef.current === 0 ? "stored" : "error");
       es.close();
     };
     es.addEventListener("event", (e) => {
       try {
         const ev = JSON.parse((e as MessageEvent).data) as LogEvent;
         setEvents((prev) => [...prev, ev]);
+        eventCountRef.current += 1;
         if (ev.kind === "done") {
           setStatus("closed");
           es.close();
@@ -57,7 +59,9 @@ export function ResearchStream({ sessionId }: { sessionId: string }) {
       <div ref={scrollRef} className={css.log}>
         {events.length === 0 ? (
           <Text muted className={css.empty}>
-            waiting for the first event…
+            {status === "stored"
+              ? "No live event stream is available for this stored session. Its asserted facts are still preserved."
+              : "waiting for the first event…"}
           </Text>
         ) : (
           events.map((e, i) => (

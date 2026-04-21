@@ -21,6 +21,12 @@
   padding: var(--ddp-space-4);
 }
 
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
 .iri {
   font-size: 0.75rem;
   word-break: break-all;

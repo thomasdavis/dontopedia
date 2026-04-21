@@ -4,7 +4,7 @@ import type * as activities from "./activities";
 
 const {
   emitProgress,
-  runClaudeResearch,
+  runResearchAgent,
   extractFacts,
   ensureResearchContext,
   assertFacts,
@@ -40,11 +40,11 @@ export async function researchWorkflow(input: ResearchInput): Promise<ResearchRe
     msg: `context ready: ${context}`,
   });
 
-  const transcript = await runClaudeResearch(input);
+  const transcript = await runResearchAgent(input);
   await emitProgress(callbackUrl, sessionId, {
     t: Date.now(),
     kind: "step",
-    msg: `claude finished — ${transcript.raw.length} chars of transcript`,
+    msg: `research agent finished — ${transcript.raw.length} chars of transcript`,
   });
 
   const facts = await extractFacts({ transcript, sessionId });

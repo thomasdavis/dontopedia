@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import type { Literal } from "@donto/client";
 import {
   assertBatch,
@@ -32,40 +35,53 @@ export async function emitProgress(
 }
 
 /**
- * Run Claude for one research session. Strategy:
+ * Run the default research agent for one research session. Strategy:
  *
- * 1. **Sandbox mode** (prod default): when `CLAUDE_SANDBOX_IMAGE` is set
+ * 1. **Sandbox mode** (prod default): when a sandbox image is set
  *    AND `/var/run/docker.sock` is mounted, spawn a sibling container:
  *
- *      docker run --rm --network $CLAUDE_SANDBOX_NETWORK \
- *        -e ANTHROPIC_API_KEY \
+ *      docker run --rm --network $CODEX_SANDBOX_NETWORK \
+ *        -e OPENAI_API_KEY \
  *        -e DONTOSRV_URL=http://dontosrv:7878 \
  *        --memory 1g --pids-limit 256 --cap-drop ALL \
- *        $CLAUDE_SANDBOX_IMAGE "<prompt>"
+ *        $CODEX_SANDBOX_IMAGE "<prompt>"
  *
  *    Each session gets a fresh container, no shared state, dropped caps,
  *    capped memory + pid count. The container only sees the compose
  *    network, so it can talk to dontosrv but not arbitrary hosts.
  *
- * 2. **Host mode** (dev): no sandbox image → spawn `claude` directly.
+ * 2. **Host mode** (dev): no sandbox image → spawn `codex` directly.
  *    Same stream handling, same prompt. Convenient locally but don't run
  *    untrusted queries this way in prod.
  */
-export async function runClaudeResearch(
+export async function runResearchAgent(
   input: ResearchInput,
 ): Promise<ResearchTranscript> {
   const prompt = buildPrompt(input);
-  const sandbox = process.env.CLAUDE_SANDBOX_IMAGE;
+  const sandbox =
+    process.env.RESEARCH_SANDBOX_IMAGE ??
+    process.env.CODEX_SANDBOX_IMAGE ??
+    process.env.CLAUDE_SANDBOX_IMAGE;
   const hostMode = !sandbox;
+  const hostOutputDir = hostMode ? await mkdtemp(join(tmpdir(), "dontopedia-codex-")) : null;
+  const hostOutputFile = hostOutputDir ? join(hostOutputDir, "last-message.txt") : null;
 
   const { bin, args } = hostMode
-    ? { bin: process.env.CLAUDE_BIN ?? "claude", args: ["--print", prompt] }
+    ? {
+        bin:
+          process.env.RESEARCH_AGENT_BIN ??
+          process.env.CODEX_BIN ??
+          process.env.CLAUDE_BIN ??
+          "codex",
+        args: buildCodexArgs(prompt, hostOutputFile!),
+      }
     : {
         bin: "docker",
         args: buildDockerArgs(sandbox!, prompt, input.sessionId),
       };
 
-  return await new Promise((resolve, reject) => {
+  try {
+    return await new Promise((resolve, reject) => {
     let stdout = "";
     let stderr = "";
     let settled = false;
@@ -91,14 +107,13 @@ export async function runClaudeResearch(
     proc.stderr.setEncoding("utf8");
     proc.stdout.on("data", (chunk: string) => {
       stdout += chunk;
-      for (const line of chunk.split("\n")) {
-        if (line.trim()) void emit("log", line);
-      }
     });
     proc.stderr.on("data", (chunk: string) => {
       stderr += chunk;
       for (const line of chunk.split("\n")) {
-        if (line.trim()) void emit("error", line);
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === "Reading additional input from stdin...") continue;
+        void emit("error", trimmed);
       }
     });
     proc.on("error", (err) => {
@@ -112,22 +127,53 @@ export async function runClaudeResearch(
       if (code !== 0) {
         return reject(new Error(`exited ${code}: ${stderr}`));
       }
-      resolve({
-        sessionId: input.sessionId,
-        summary: firstSummary(stdout) ?? "(no summary)",
-        raw: stdout,
-      });
+      void (async () => {
+        try {
+          const raw = hostOutputFile ? await readFile(hostOutputFile, "utf8") : stdout;
+          resolve({
+            sessionId: input.sessionId,
+            summary: firstSummary(raw) ?? "(no summary)",
+            raw,
+          });
+        } catch (err) {
+          reject(err);
+        }
+      })();
     });
-  });
+    });
+  } finally {
+    if (hostOutputDir) {
+      await rm(hostOutputDir, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+}
+
+function buildCodexArgs(prompt: string, outputFile: string): string[] {
+  return [
+    "--search",
+    "exec",
+    "--yolo",
+    "--skip-git-repo-check",
+    "--color",
+    "never",
+    "--json",
+    "--output-last-message",
+    outputFile,
+    prompt,
+  ];
 }
 
 function buildDockerArgs(image: string, prompt: string, sessionId: string): string[] {
-  const network = process.env.CLAUDE_SANDBOX_NETWORK ?? "dontopedia_default";
+  const network =
+    process.env.RESEARCH_SANDBOX_NETWORK ??
+    process.env.CODEX_SANDBOX_NETWORK ??
+    process.env.CLAUDE_SANDBOX_NETWORK ??
+    "dontopedia_default";
   const args = [
     "run",
     "--rm",
     "--name",
-    `claude-${sessionId}`,
+    `codex-${sessionId}`,
     "--network",
     network,
     "--memory",
@@ -136,9 +182,9 @@ function buildDockerArgs(image: string, prompt: string, sessionId: string): stri
     "256",
     "--cap-drop",
     "ALL",
-    // The entrypoint copies creds into the claude user's home and
+    // The entrypoint copies auth into the codex user's home and
     // switches uid, which needs CHOWN / SETUID / SETGID. DAC_OVERRIDE
-    // lets root write into /home/claude without owning it. These four
+    // lets root write into /home/codex without owning it. These four
     // are a tiny surface area compared to the default cap set.
     "--cap-add",
     "CHOWN",
@@ -153,22 +199,18 @@ function buildDockerArgs(image: string, prompt: string, sessionId: string): stri
     "-e",
     `DONTOSRV_URL=${process.env.DONTOSRV_URL ?? "http://dontosrv:7878"}`,
   ];
-  if (process.env.ANTHROPIC_API_KEY) {
-    args.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
+  if (process.env.OPENAI_API_KEY) {
+    args.push("-e", `OPENAI_API_KEY=${process.env.OPENAI_API_KEY}`);
   }
-  // Mount the host's Claude credential state into the sandbox so sessions
-  // inherit whatever OAuth state `claude login` set up on the droplet.
-  // Claude CLI keeps state in TWO places:
-  //   ~/.claude.json   — main config + OAuth tokens
-  //   ~/.claude/       — cache, history, agent files
-  // Both paths are on the Docker HOST (the droplet), not inside the worker
-  // container — resolved by dockerd at `docker run` time.
-  const credsHome = process.env.CLAUDE_CREDS_HOME ?? "/root";
-  // Mount host creds read-only under /creds; the sandbox entrypoint copies
-  // them into a writable $HOME so claude can refresh its OAuth token
-  // without hitting EROFS on the bind mount.
-  args.push("-v", `${credsHome}/.claude.json:/creds/.claude.json:ro`);
-  args.push("-v", `${credsHome}/.claude:/creds/.claude:ro`);
+  // Mount the host's Codex credential directory so sessions inherit
+  // whatever `codex login` set up on the droplet. The sandbox entrypoint
+  // copies only the small auth/config files it needs into a writable $HOME.
+  const credsHome =
+    process.env.RESEARCH_AGENT_CREDS_HOME ??
+    process.env.CODEX_CREDS_HOME ??
+    process.env.CLAUDE_CREDS_HOME ??
+    "/root";
+  args.push("-v", `${credsHome}/.codex:/creds/.codex:ro`);
   args.push(image, prompt);
   return args;
 }
@@ -181,11 +223,11 @@ function buildPrompt(input: ResearchInput): string {
     `## Who you are`,
     ``,
     `You are a research agent for Dontopedia, an open, paraconsistent wiki`,
-    `built on donto (a bitemporal quad store). Your job: use WebSearch,`,
-    `WebFetch, Bash, Read to investigate a query, gather verifiable facts`,
-    `with citations, and lay them out in a structured block at the end so`,
-    `the extractor (a gpt-4.1-mini pass in the next activity) can file them`,
-    `into donto.`,
+    `built on donto (a bitemporal quad store). Your job: use web search,`,
+    `shell commands, and any local reads available in this environment to`,
+    `investigate a query, gather verifiable facts with citations, and lay`,
+    `them out in a structured block at the end so the extractor (a`,
+    `gpt-4.1-mini pass in the next activity) can file them into donto.`,
     ``,
     `## The query`,
     ``,
@@ -308,14 +350,14 @@ export async function extractFacts(input: {
   transcript: ResearchTranscript;
   sessionId: string;
 }): Promise<ExtractedFact[]> {
-  // Fast path: Claude's prompt asks it to emit a ```json fenced block
+  // Fast path: the research prompt asks it to emit a ```json fenced block
   // with structured facts. If present and parseable, skip the gpt-4.1-mini
   // call entirely — cheaper, faster, no OpenAI dependency.
   const { parseStructuredBlock } = await import("@dontopedia/extraction");
   const directParse = parseStructuredBlock(input.transcript.raw);
   if (directParse && directParse.length > 0) {
     console.log(
-      `[extractFacts] direct-parsed ${directParse.length} facts from Claude's structured block (skipped OpenAI)`,
+      `[extractFacts] direct-parsed ${directParse.length} facts from the research agent structured block (skipped OpenAI)`,
     );
     return directParse as ExtractedFact[];
   }
@@ -467,7 +509,7 @@ function dontosrvBase(): string {
 
 export const activities = {
   emitProgress,
-  runClaudeResearch,
+  runResearchAgent,
   extractFacts,
   ensureResearchContext,
   assertFacts,

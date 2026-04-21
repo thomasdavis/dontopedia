@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # One-command deploy: create droplet, wait for cloud-init, point DO DNS,
-# print the `claude login` + compose-up instructions.
+# print the `codex login` + compose-up instructions.
 #
 # Required env:
 #   DO_SSH_KEY                 — fingerprint from `doctl compute ssh-key list`
@@ -56,16 +56,16 @@ Registrar: make sure the nameservers for $ZONE are pointed at
 Propagation: 5–30 min after the NS change.
 
 Cloud-init is bringing up Docker + the whole stack (everything except the
-Temporal worker, which waits on Claude auth). Takes ~5–8 min. Watch live:
+Temporal worker, which waits on Codex auth). Takes ~5–8 min. Watch live:
 
   ssh root@$IP "tail -f /var/log/cloud-init-output.log"
 
 When the bootstrap finishes (you'll see the next-steps block at the tail),
 SSH in and:
 
-  # 1. Auth Claude Code (browser OAuth, one-time):
+  # 1. Auth Codex (browser OAuth, one-time):
   ssh root@$IP
-  claude login
+  codex login
 
   # 2. Start the worker:
   cd /srv/dontopedia/infra/compose

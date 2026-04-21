@@ -10,7 +10,7 @@ on purpose — if two sources disagree, both belong on the page.
 ```
 apps/
   web/              Next.js 16 (App Router) — homepage, search, articles, research
-  agent-runner/     Spawns Claude Code sessions for user-triggered research
+  agent-runner/     Starts Codex-powered research sessions for user-triggered research
   worker/           Temporal worker — extraction + ingestion into donto
 packages/
   ui/               base-ui design system (Material-inspired tokens + primitives)

@@ -6,4 +6,6 @@ export { Stack } from "./Stack";
 export { Text, Heading } from "./Text";
 export { Tooltip } from "./Tooltip";
 export { ContradictionMark } from "./ContradictionMark";
+export { Table } from "./Table";
+export type { TableColumn, TableProps } from "./Table";
 export { cx } from "./cx";

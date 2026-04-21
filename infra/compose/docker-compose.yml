@@ -69,14 +69,14 @@ services:
     ports:
       - "127.0.0.1:8233:8080"
 
-  # Per-session Claude sandbox image. Built here so `docker compose build`
+  # Per-session Codex sandbox image. Built here so `docker compose build`
   # produces it; the worker spawns it with `docker run --rm` when a session
   # starts. No ports, no long-running container.
-  claude-sandbox:
+  codex-sandbox:
     build:
       context: ../../../
-      dockerfile: dontopedia/infra/docker/claude-sandbox.Dockerfile
-    image: dontopedia-claude-sandbox:latest
+      dockerfile: dontopedia/infra/docker/codex-sandbox.Dockerfile
+    image: dontopedia-codex-sandbox:latest
     command: ["--version"]
     restart: "no"
     profiles: ["build-only"]
@@ -92,6 +92,9 @@ services:
       RUNNER_PUBLIC_URL: http://agent-runner:4001
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       AGENT_RUNNER_MOCK: ${AGENT_RUNNER_MOCK:-0}
+      AGENT_RUNNER_STORE_DIR: /data/sessions
+    volumes:
+      - agent-runner-data:/data
     depends_on:
       - dontosrv
       - temporal
@@ -108,13 +111,12 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       RUNNER_PUBLIC_URL: http://agent-runner:4001
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       EXTRACTION_MODEL: ${EXTRACTION_MODEL:-gpt-4.1-mini}
       # Sandbox settings — worker spawns per-session sibling containers via
-      # docker.sock. Set CLAUDE_SANDBOX_IMAGE=0 (or unset socket) to fall
+      # docker.sock. Set CODEX_SANDBOX_IMAGE=0 (or unset socket) to fall
       # back to spawning on the host for dev.
-      CLAUDE_SANDBOX_IMAGE: dontopedia-claude-sandbox:latest
-      CLAUDE_SANDBOX_NETWORK: dontopedia_default
+      CODEX_SANDBOX_IMAGE: dontopedia-codex-sandbox:latest
+      CODEX_SANDBOX_NETWORK: dontopedia_default
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -221,6 +223,7 @@ services:
 
 volumes:
   pgdata:
+  agent-runner-data:
   caddy-data:
   caddy-config:
   loki-data:
