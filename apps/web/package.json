@@ -12,17 +12,21 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@base-ui-components/react": "^1.0.0-alpha.20",
+    "@donto/client": "file:../../../donto/packages/donto-client",
+    "@dontopedia/extraction": "workspace:*",
     "@dontopedia/sdk": "workspace:*",
     "@dontopedia/ui": "workspace:*",
-    "@donto/client": "file:../../../donto/packages/donto-client",
     "next": "^16.2.4",
+    "pdf-parse": "^2.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.17.0",

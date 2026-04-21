@@ -18,6 +18,7 @@ import { ArticleTabs } from "@/components/ArticleTabs";
 import { ArticleTimeline } from "@/components/ArticleTimeline";
 import { AssertFact } from "@/components/AssertFact";
 import { ClaimsList, type SerializedClaim } from "@/components/ClaimsList";
+import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
   RetractedToggleButton,
@@ -415,9 +416,18 @@ export default async function ArticlePage({
                         const meta = sourceContexts.get(ctx);
                         const url = sourceUrls.get(ctx);
                         const name = sourceNames.get(ctx) ?? prettifyContext(ctx);
+                        const isDoc = ctx.startsWith("ctx:src/doc-");
+                        const docSlug = isDoc ? ctx.replace("ctx:src/", "") : null;
                         return (
                           <li key={ctx} id={`ref-${n}`}>
-                            {url ? (
+                            {isDoc && docSlug ? (
+                              <Link
+                                href={`/source/${docSlug}` as any}
+                                className={css.refLink}
+                              >
+                                {"\u{1f4ce}"} {name}
+                              </Link>
+                            ) : url ? (
                               <a
                                 href={url}
                                 target="_blank"
@@ -469,6 +479,7 @@ export default async function ArticlePage({
                       label="Research this subject"
                     />
                     <AssertFact subjectIri={iri} />
+                    <UploadButton subjectIri={iri} />
                   </div>
                 </PredicateSection>
               </div>
@@ -536,6 +547,7 @@ function EmptyArticle({ iri }: { iri: string }) {
               label="Research this subject"
             />
             <AssertFact subjectIri={iri} />
+            <UploadButton subjectIri={iri} />
           </div>
           <div className={css.emptyIri}>
             <span>donto IRI</span>

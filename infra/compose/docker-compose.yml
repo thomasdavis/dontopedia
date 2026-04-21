@@ -135,6 +135,10 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://dontopedia.com}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAGIC_LINK_FROM: ${MAGIC_LINK_FROM:-Dontopedia <auth@dontopedia.com>}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      UPLOADS_DIR: /uploads
+    volumes:
+      - uploads:/uploads
     depends_on:
       - dontosrv
       - agent-runner
@@ -222,3 +226,4 @@ volumes:
   loki-data:
   grafana-data:
   pg-backups:
+  uploads:
