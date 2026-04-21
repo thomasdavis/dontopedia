@@ -183,13 +183,23 @@ export default async function ArticlePage({
     retractedByPred.get(r.predicate)!.push(r);
   }
 
+  // Infobox: show ONE row per predicate (pick the best value, not all 5
+  // "studiedAt" duplicates). This ensures birth/family/school facts don't
+  // get pushed off the bottom by repetitive predicates.
   const infobox: { label: string; value: React.ReactNode; ref?: number }[] = [];
-  const seen = new Set<string>();
+  const seenPreds = new Set<string>();
+  const seenValues = new Set<string>();
   for (const p of INFOBOX_PREDS) {
+    // Allow up to 3 values per predicate (e.g. 3 residesIn = contradiction)
+    let countForPred = 0;
+    const MAX_PER_PRED = 3;
     for (const r of current.filter((r) => r.predicate === p)) {
-      const key = `${p}=${formatObject(r)}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      const val = formatObject(r);
+      const key = `${p}=${val}`;
+      if (seenValues.has(key)) continue;
+      seenValues.add(key);
+      if (countForPred >= MAX_PER_PRED) continue;
+      countForPred++;
       infobox.push({
         label: prettifyLabel("x:" + p),
         value: r.object_iri ? (
@@ -197,11 +207,11 @@ export default async function ArticlePage({
             {prettifyLabel(r.object_iri)}
           </Link>
         ) : (
-          formatObject(r)
+          val
         ),
         ref: refs.get(r.context),
       });
-      if (infobox.length >= 18) break;
+      if (infobox.length >= 30) break;
     }
   }
 
