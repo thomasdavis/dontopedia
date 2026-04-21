@@ -1,0 +1,84 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.body {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Stats bar ────────────────────────────────────────────────────── */
+
+.statsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ddp-space-2) var(--ddp-space-4);
+  background: var(--ddp-color-surface-container);
+  border-bottom: 1px solid var(--ddp-color-outline-variant);
+  font-family: var(--ddp-font-sans);
+  font-size: 13px;
+  color: var(--ddp-color-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.statsLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--ddp-space-4);
+}
+
+.statChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ddp-space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.statNumber {
+  font-weight: 600;
+  color: var(--ddp-color-on-surface);
+}
+
+/* ── Legend ────────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ddp-space-3);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ddp-space-1);
+  font-size: 12px;
+  font-family: var(--ddp-font-sans);
+  color: var(--ddp-color-on-surface-variant);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Graph container ──────────────────────────────────────────────── */
+
+.graphWrap {
+  flex: 1;
+  overflow: hidden;
+}
+
+.graph {
+  border: none;
+  border-radius: 0;
+}

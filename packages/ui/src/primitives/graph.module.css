@@ -1,0 +1,81 @@
+/* ── Graph ─────────────────────────────────────────────────────────── */
+
+.root {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ddp-radius-md);
+  background: var(--ddp-color-surface);
+  border: 1px solid var(--ddp-color-outline-variant);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.root:active {
+  cursor: grabbing;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Tooltip overlay ──────────────────────────────────────────────── */
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  padding: var(--ddp-space-2) var(--ddp-space-3);
+  background: var(--ddp-color-surface-container-highest);
+  color: var(--ddp-color-on-surface);
+  font-family: var(--ddp-font-sans);
+  font-size: 13px;
+  line-height: 1.3;
+  border-radius: var(--ddp-radius-sm);
+  box-shadow: var(--ddp-elevation-3);
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  margin-top: -12px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity var(--ddp-duration-fast) var(--ddp-easing-standard);
+}
+
+.tooltipVisible {
+  opacity: 1;
+}
+
+/* ── Zoom controls ────────────────────────────────────────────────── */
+
+.controls {
+  position: absolute;
+  bottom: var(--ddp-space-3);
+  right: var(--ddp-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ddp-space-1);
+  z-index: 5;
+}
+
+.controlBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ddp-color-outline-variant);
+  border-radius: var(--ddp-radius-sm);
+  background: var(--ddp-color-surface);
+  color: var(--ddp-color-on-surface);
+  font-family: var(--ddp-font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--ddp-duration-fast) var(--ddp-easing-standard);
+  pointer-events: auto;
+}
+
+.controlBtn:hover {
+  background: var(--ddp-color-surface-container);
+}

@@ -11,6 +11,12 @@ export function TopBar({ children }: { children?: ReactNode }) {
       </Link>
       <div className={css.search}>{children}</div>
       <nav className={css.nav}>
+        <Link href={"/articles" as any} className={css.navItem}>
+          articles
+        </Link>
+        <Link href={"/graph" as any} className={css.navItem}>
+          graph
+        </Link>
         <Link href="/recent" className={css.navItem}>
           recent
         </Link>

@@ -8,4 +8,6 @@ export { Tooltip } from "./Tooltip";
 export { ContradictionMark } from "./ContradictionMark";
 export { Table } from "./Table";
 export type { TableColumn, TableProps } from "./Table";
+export { Graph } from "./Graph";
+export type { GraphNode, GraphEdge, GraphProps } from "./Graph";
 export { cx } from "./cx";
