@@ -1,15 +1,30 @@
 /**
- * IRI <-> URL-safe slug. The goal is round-trippable encoding so article
- * URLs stay readable for IRIs we care about ("ex:alice") while still
- * surviving weird characters.
+ * IRI <-> URL-safe slug.
  *
- * Strategy: base64url the raw IRI. Short, lossless, opaque. We can add a
- * prettier "slug + suffix" form later if the SEO story matters.
+ * Nice slugs: `ex:thomas-davis-ajax` → `thomas-davis-ajax`
+ *             `ex:barack-obama`      → `barack-obama`
+ *
+ * For IRIs that don't start with `ex:`, or contain characters that
+ * aren't URL-safe, we fall back to base64url encoding (round-trippable,
+ * lossless). Old base64url links still resolve — slugToIri tries the
+ * nice-slug path first, falls back to base64 decode.
  */
-const enc = new TextEncoder();
-const dec = new TextDecoder();
 
+/**
+ * Convert an IRI to a URL slug for article routes.
+ * `ex:thomas-davis-ajax` → `thomas-davis-ajax` (clean)
+ * `ctx:research/abc`     → base64url (opaque, but round-trippable)
+ */
 export function iriToSlug(iri: string): string {
+  // Nice slug for ex: IRIs that are already kebab-safe.
+  if (iri.startsWith("ex:")) {
+    const tail = iri.slice(3);
+    if (/^[a-z0-9][a-z0-9-]*$/.test(tail)) {
+      return tail;
+    }
+  }
+  // Fallback: base64url (backwards compatible with old links).
+  const enc = new TextEncoder();
   const bytes = enc.encode(iri);
   return btoa(String.fromCharCode(...bytes))
     .replaceAll("+", "-")
@@ -17,7 +32,20 @@ export function iriToSlug(iri: string): string {
     .replaceAll("=", "");
 }
 
+/**
+ * Convert a URL slug back to an IRI.
+ * `thomas-davis-ajax`    → `ex:thomas-davis-ajax` (nice slug)
+ * `ZXg6YmFyYWNrLW9iYW1h` → `ex:barack-obama`     (base64 legacy)
+ */
 export function slugToIri(slug: string): string {
+  // If it looks like a nice kebab slug (lowercase letters, digits, hyphens,
+  // and NOT a valid base64 string that decodes to something with a colon),
+  // treat it as an `ex:` IRI tail.
+  if (/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+    return `ex:${slug}`;
+  }
+  // Otherwise decode as base64url.
+  const dec = new TextDecoder();
   const pad = slug.length % 4;
   const b64 =
     slug.replaceAll("-", "+").replaceAll("_", "/") +

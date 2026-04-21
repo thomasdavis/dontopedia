@@ -185,11 +185,31 @@ export default async function ArticlePage({
 
   // --- Feature 3: Source URL resolution ---
   // Fetch contexts to resolve source context IRIs to richer labels.
+  // Also look up hasUrl facts on source contexts so we can render clickable links.
   let sourceContexts = new Map<string, { kind: string; mode: string; count: number }>();
+  const sourceUrls = new Map<string, string>(); // source context IRI → actual URL
+  const sourceNames = new Map<string, string>(); // source context IRI → human name
   try {
     const ctxRes = await dpClient().contexts();
     for (const c of ctxRes.contexts) {
       sourceContexts.set(c.context, { kind: c.kind, mode: c.mode, count: c.count });
+    }
+    // Look up URL/name facts for all source contexts referenced by this subject.
+    const allCtxIris = new Set<string>();
+    for (const r of current) allCtxIris.add(r.context);
+    for (const ctx of allCtxIris) {
+      if (!ctx.startsWith("ctx:src/") && !ctx.startsWith("ctx:src-")) continue;
+      try {
+        const h = await dpClient().history(ctx, { limit: 10, include_retracted: false });
+        for (const row of h.rows) {
+          if (row.predicate === "hasUrl" && row.object_lit?.v) {
+            sourceUrls.set(ctx, String(row.object_lit.v));
+          }
+          if (row.predicate === "name" && row.object_lit?.v) {
+            sourceNames.set(ctx, String(row.object_lit.v));
+          }
+        }
+      } catch { /* non-fatal */ }
     }
   } catch {
     // Non-fatal: refs section degrades to showing raw context IRIs.
@@ -377,9 +397,22 @@ export default async function ArticlePage({
                     <ol className={css.refList}>
                       {[...refs.entries()].map(([ctx, n]) => {
                         const meta = sourceContexts.get(ctx);
+                        const url = sourceUrls.get(ctx);
+                        const name = sourceNames.get(ctx) ?? prettifyContext(ctx);
                         return (
                           <li key={ctx} id={`ref-${n}`}>
-                            <span className={css.refLabel}>{prettifyContext(ctx)}</span>
+                            {url ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={css.refLink}
+                              >
+                                {name}
+                              </a>
+                            ) : (
+                              <span className={css.refLabel}>{name}</span>
+                            )}
                             {meta && (
                               <span className={css.refKind}>{meta.kind}</span>
                             )}

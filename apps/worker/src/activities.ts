@@ -312,16 +312,50 @@ export async function assertFacts(input: {
 }): Promise<number> {
   const base = dontosrvBase();
 
-  const uniqueSources = new Set(
-    input.facts.filter((f) => f.source?.iri).map((f) => f.source.iri),
-  );
-  await Promise.all(
-    [...uniqueSources].map((iri) =>
-      ensureContext(base, { iri, kind: "source", mode: "permissive" }).catch(() => {
-        /* non-fatal */
-      }),
-    ),
-  );
+  // Ensure source contexts exist + assert their URL as a fact so the
+  // article References section can render clickable hyperlinks.
+  const sourceMeta = new Map<string, { label: string; url?: string }>();
+  for (const f of input.facts) {
+    if (!f.source?.iri || sourceMeta.has(f.source.iri)) continue;
+    sourceMeta.set(f.source.iri, {
+      label: f.source.label ?? f.source.iri,
+      url: f.source.url,
+    });
+  }
+  for (const [iri, meta] of sourceMeta) {
+    await ensureContext(base, { iri, kind: "source", mode: "permissive" }).catch(() => {});
+    // Assert source metadata as facts on the source context itself.
+    const sourceStmts: AssertInput[] = [];
+    if (meta.url) {
+      sourceStmts.push({
+        subject: iri,
+        predicate: "hasUrl",
+        object_iri: null,
+        object_lit: { v: meta.url, dt: "xsd:anyURI" } as Literal,
+        context: iri,
+        polarity: "asserted",
+        maturity: 1,
+        valid_from: null,
+        valid_to: null,
+      });
+    }
+    if (meta.label && meta.label !== iri) {
+      sourceStmts.push({
+        subject: iri,
+        predicate: "name",
+        object_iri: null,
+        object_lit: { v: meta.label, dt: "xsd:string" } as Literal,
+        context: iri,
+        polarity: "asserted",
+        maturity: 1,
+        valid_from: null,
+        valid_to: null,
+      });
+    }
+    if (sourceStmts.length > 0) {
+      await assertBatch(base, sourceStmts).catch(() => {});
+    }
+  }
 
   const statements: AssertInput[] = [];
   let skipped = 0;
