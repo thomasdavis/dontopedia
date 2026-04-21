@@ -13,9 +13,10 @@ fi
 chown -R claude:claude /home/claude
 chmod 0600 /home/claude/.claude.json 2>/dev/null || true
 
-# Wire up reddit-mcp-buddy as an MCP server so Claude can browse Reddit
-# (search posts, read threads, analyze users) during research sessions.
-# The MCP config goes in the claude settings directory.
+# Wire up reddit-mcp-buddy. NOTE: Reddit blocks datacenter IPs so the MCP
+# may return 403 from cloud instances. Claude should fall back to WebSearch
+# with site:reddit.com queries when this happens. The MCP is kept installed
+# because it works fine from residential IPs / local dev.
 mkdir -p /home/claude/.claude
 cat > /home/claude/.claude/mcp.json << 'MCP'
 {
@@ -29,9 +30,6 @@ cat > /home/claude/.claude/mcp.json << 'MCP'
 MCP
 chown claude:claude /home/claude/.claude/mcp.json
 
-# --allowed-tools is a variadic flag; passing a comma-separated single
-# arg stops it from greedily swallowing the prompt.
-# Added mcp__reddit__* to allowed tools so all Reddit MCP tools are usable.
 exec su-exec claude claude \
   --print \
   --permission-mode bypassPermissions \
