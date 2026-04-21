@@ -270,6 +270,20 @@ export async function extractFacts(input: {
   transcript: ResearchTranscript;
   sessionId: string;
 }): Promise<ExtractedFact[]> {
+  // Fast path: Claude's prompt asks it to emit a ```json fenced block
+  // with structured facts. If present and parseable, skip the gpt-4.1-mini
+  // call entirely — cheaper, faster, no OpenAI dependency.
+  const { parseStructuredBlock } = await import("@dontopedia/extraction");
+  const directParse = parseStructuredBlock(input.transcript.raw);
+  if (directParse && directParse.length > 0) {
+    console.log(
+      `[extractFacts] direct-parsed ${directParse.length} facts from Claude's structured block (skipped OpenAI)`,
+    );
+    return directParse as ExtractedFact[];
+  }
+
+  // Slow path: send the full transcript to gpt-4.1-mini for extraction.
+  console.log(`[extractFacts] no structured block found — falling back to gpt-4.1-mini`);
   return (await extractFactsFromText(input.transcript.raw, {
     context: { sessionId: input.sessionId },
   })) as ExtractedFact[];
