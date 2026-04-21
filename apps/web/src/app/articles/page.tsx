@@ -1,10 +1,9 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { Badge, Heading, Stack, Table, Text } from "@dontopedia/ui";
-import type { TableColumn } from "@dontopedia/ui";
-import { dpClient, iriToSlug, prettifyLabel } from "@dontopedia/sdk";
+import { Badge, Heading, Stack, Text } from "@dontopedia/ui";
+import { dpClient, prettifyLabel } from "@dontopedia/sdk";
 import { SearchForm } from "@/components/SearchForm";
 import { TopBar } from "@/components/TopBar";
+import { ArticlesTable } from "./ArticlesTable";
 import css from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -13,52 +12,19 @@ export const metadata: Metadata = {
   title: "All articles — Dontopedia",
 };
 
-interface SubjectRow extends Record<string, unknown> {
-  id: string;
-  subject: string;
-  label: string;
-  facts: number;
-}
-
 export default async function ArticlesPage() {
   const res = await dpClient()
     .subjects()
     .catch(() => ({ subjects: [] as { subject: string; count: number }[] }));
 
-  const rows: SubjectRow[] = res.subjects.map((s) => ({
-    id: s.subject,
-    subject: s.subject,
-    label: prettifyLabel(s.subject),
-    facts: s.count,
-  }));
-
-  // Sort by fact count descending by default
-  rows.sort((a, b) => b.facts - a.facts);
-
-  const columns: TableColumn<SubjectRow>[] = [
-    {
-      key: "label",
-      label: "Subject",
-      sortable: true,
-      render: (_val, row) => (
-        <Link href={`/article/${iriToSlug(row.subject)}`} className={css.subjectLink}>
-          {row.label}
-        </Link>
-      ),
-    },
-    {
-      key: "subject",
-      label: "IRI",
-      sortable: true,
-      render: (val) => <span className={css.mono}>{String(val)}</span>,
-    },
-    {
-      key: "facts",
-      label: "Facts",
-      sortable: true,
-      width: 90,
-    },
-  ];
+  const rows = res.subjects
+    .map((s) => ({
+      id: s.subject,
+      subject: s.subject,
+      label: prettifyLabel(s.subject),
+      facts: s.count,
+    }))
+    .sort((a, b) => b.facts - a.facts);
 
   return (
     <main className={css.page}>
@@ -80,16 +46,7 @@ export default async function ArticlesPage() {
           </Badge>
         </Stack>
 
-        <Table<SubjectRow>
-          columns={columns}
-          data={rows}
-          rowKey="id"
-          pageSize={50}
-          filterable
-          filterPlaceholder="Filter subjects..."
-          stickyHeader
-          emptyMessage="No subjects found. Start by asserting some facts!"
-        />
+        <ArticlesTable rows={rows} />
       </div>
     </main>
   );
