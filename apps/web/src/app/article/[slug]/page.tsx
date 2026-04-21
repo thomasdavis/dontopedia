@@ -132,7 +132,43 @@ export default async function ArticlePage({
   const rows = history.rows;
   const current = rows.filter((r) => !r.tx_hi);
   const retracted = rows.filter((r) => !!r.tx_hi);
-  const groups = groupByPredicate(current).filter((g) => !NAME_PREDS.has(g.predicate));
+  const rawGroups = groupByPredicate(current).filter((g) => !NAME_PREDS.has(g.predicate));
+
+  // Sort predicate sections by semantic importance so biographical facts
+  // appear first (like Wikipedia), not buried at section #300.
+  const SECTION_ORDER: Record<string, number> = {
+    // Identity & biography
+    fullName: 1, dateOfBirth: 2, placeOfBirth: 3, bornIn: 4, bornAt: 5,
+    sex: 6, nationality: 7, birthName: 8, middleName: 9,
+    // Family
+    father: 10, mother: 11, spouseOf: 12, parentOf: 13, hasSiblings: 14,
+    childhoodHome: 15, childhoodAddress: 16,
+    // Location
+    grewUpIn: 20, hometown: 21, residesIn: 22,
+    // Education
+    highSchool: 30, attendedSchool: 31, studiedAt: 32, almaMater: 33,
+    educatedAt: 34, attendedUniversity: 35, fieldOfStudy: 36,
+    // Career
+    occupation: 40, employedBy: 41, employer: 42, heldOffice: 43,
+    roleAtEarbits: 44, roleAtBlockbid: 45, roleAtTokenized: 46,
+    // Projects & creations
+    founderOf: 50, coFounderOf: 51, cofounderOf: 52, authorOf: 53,
+    builtWebsite: 54, ownsRepo: 55, contributedTo: 56,
+    // Recognition
+    award: 60, knownFor: 61,
+    // Online presence
+    twitterHandle: 70, githubHandle: 71, website: 72, email: 73,
+    // Opinions & quotes
+    holdsOpinion: 80, quotedAsSaying: 81, advocatesFor: 82,
+    // Technical
+    programsIn: 90, usesTool: 91, prefersUsing: 92,
+  };
+  const groups = rawGroups.sort((a, b) => {
+    const oa = SECTION_ORDER[a.predicate] ?? 500;
+    const ob = SECTION_ORDER[b.predicate] ?? 500;
+    if (oa !== ob) return oa - ob;
+    return b.statements.length - a.statements.length; // within same tier, most facts first
+  });
   const contradictions = findContradictions(current);
   const conflictByPred = new Map(contradictions.map((c) => [c.predicate, c]));
   const label = preferredLabel(current, iri);
