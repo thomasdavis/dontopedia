@@ -33,9 +33,17 @@ export const dynamic = "force-dynamic";
 
 const NAME_PREDS = new Set(["name", "rdfs:label", "ex:label", "ex:name", "label", "title"]);
 const INFOBOX_PREDS = [
-  "dateOfBirth", "birthName", "bornIn", "dateOfDeath", "diedIn", "causeOfDeath",
-  "occupation", "nationality", "spouseOf", "parentOf", "almaMater", "knownFor",
-  "heldOffice", "actedIn", "authorOf", "memberOf", "award",
+  "fullName", "dateOfBirth", "placeOfBirth", "bornIn", "bornAt", "birthName",
+  "sex", "nationality", "highSchool", "attendedSchool", "studiedAt",
+  "almaMater", "fieldOfStudy", "grewUpIn", "hometown", "residesIn",
+  "childhoodHome", "childhoodAddress",
+  "father", "mother", "spouseOf", "parentOf", "hasSiblings",
+  "occupation", "employedBy", "employer", "roleAtEarbits", "roleAtBlockbid",
+  "roleAtTokenized", "founderOf", "coFounderOf", "cofounderOf",
+  "authorOf", "knownFor", "award", "heldOffice",
+  "actedIn", "memberOf",
+  "dateOfDeath", "diedIn", "causeOfDeath",
+  "twitterHandle", "githubHandle", "website", "email",
 ] as const;
 
 function preferredLabel(rows: Statement[], iri: string): string {
