@@ -59,13 +59,18 @@ function preferredLede(rows: Statement[]): string | null {
   return null;
 }
 
+/**
+ * Build the references map. Includes:
+ * - ctx:src/* contexts from facts (direct citations)
+ * - ctx:research/* contexts (research sessions that produced the facts)
+ */
 function buildRefs(rows: Statement[]): Map<string, number> {
   const refs = new Map<string, number>();
   let n = 1;
-  for (const r of rows) {
-    if (r.context.startsWith("ctx:src/") && !refs.has(r.context)) {
-      refs.set(r.context, n++);
-    }
+  const contexts = new Set<string>();
+  for (const r of rows) contexts.add(r.context);
+  for (const ctx of contexts) {
+    if (!refs.has(ctx)) refs.set(ctx, n++);
   }
   return refs;
 }
@@ -184,35 +189,46 @@ export default async function ArticlePage({
   void inbound;
 
   // --- Feature 3: Source URL resolution ---
-  // Fetch contexts to resolve source context IRIs to richer labels.
-  // Also look up hasUrl facts on source contexts so we can render clickable links.
+  // --- Feature 3: Source URL resolution ---
+  // Fetch ALL ctx:src/* subjects that have hasUrl facts. These are the
+  // external citations that research sessions discovered. We display them
+  // as clickable hyperlinks in the References section regardless of which
+  // research context the article's facts actually live under.
   let sourceContexts = new Map<string, { kind: string; mode: string; count: number }>();
-  const sourceUrls = new Map<string, string>(); // source context IRI → actual URL
-  const sourceNames = new Map<string, string>(); // source context IRI → human name
+  const sourceUrls = new Map<string, string>();
+  const sourceNames = new Map<string, string>();
   try {
     const ctxRes = await dpClient().contexts();
     for (const c of ctxRes.contexts) {
       sourceContexts.set(c.context, { kind: c.kind, mode: c.mode, count: c.count });
     }
-    // Look up URL/name facts for all source contexts referenced by this subject.
-    const allCtxIris = new Set<string>();
-    for (const r of current) allCtxIris.add(r.context);
-    for (const ctx of allCtxIris) {
-      if (!ctx.startsWith("ctx:src/") && !ctx.startsWith("ctx:src-")) continue;
-      try {
-        const h = await dpClient().history(ctx, { limit: 10, include_retracted: false });
-        for (const row of h.rows) {
-          if (row.predicate === "hasUrl" && row.object_lit?.v) {
-            sourceUrls.set(ctx, String(row.object_lit.v));
+    // Scan every ctx:src/* context that exists in donto for hasUrl/name.
+    // This is O(sources) queries — fine for <100 sources; if it gets big,
+    // dontosrv should expose a batch lookup.
+    const srcCtxs = ctxRes.contexts
+      .filter((c) => c.context.startsWith("ctx:src/") || c.context.startsWith("ctx:src-"))
+      .slice(0, 50);
+    await Promise.all(
+      srcCtxs.map(async (c) => {
+        try {
+          const h = await dpClient().history(c.context, { limit: 10, include_retracted: false });
+          for (const row of h.rows) {
+            if (row.predicate === "hasUrl" && row.object_lit?.v) {
+              sourceUrls.set(c.context, String(row.object_lit.v));
+            }
+            if (row.predicate === "name" && row.object_lit?.v) {
+              sourceNames.set(c.context, String(row.object_lit.v));
+            }
           }
-          if (row.predicate === "name" && row.object_lit?.v) {
-            sourceNames.set(ctx, String(row.object_lit.v));
-          }
-        }
-      } catch { /* non-fatal */ }
+        } catch { /* non-fatal */ }
+      }),
+    );
+    // Add source URLs to the refs map so they appear in References.
+    for (const [ctx] of sourceUrls) {
+      if (!refs.has(ctx)) refs.set(ctx, refs.size + 1);
     }
   } catch {
-    // Non-fatal: refs section degrades to showing raw context IRIs.
+    // Non-fatal.
   }
 
   const toc = groups.map((g) => ({
