@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predicate Extraction Benchmark</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --tier1: #58a6ff;
+    --tier2: #3fb950;
+    --tier3: #d29922;
+    --tier4: #f0883e;
+    --tier5: #f85149;
+    --tier6: #bc8cff;
+    --tier7: #ff7b72;
+    --tier8: #d2a8ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+  .card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  .card .detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+  th {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 1;
+  }
+  th:hover { color: var(--accent); }
+  th.sorted-asc::after { content: ' ▲'; color: var(--accent); }
+  th.sorted-desc::after { content: ' ▼'; color: var(--accent); }
+  td {
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:hover td { background: rgba(88, 166, 255, 0.04); }
+  tr.error td { opacity: 0.4; }
+  .model-name {
+    font-weight: 600;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar-cell { min-width: 200px; }
+
+  .tier-bar {
+    display: flex;
+    height: 20px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--border);
+    min-width: 160px;
+  }
+  .tier-bar .seg {
+    height: 100%;
+    position: relative;
+    transition: width 0.3s;
+  }
+  .tier-bar .seg:hover { filter: brightness(1.3); }
+  .tier-bar .seg:hover::after {
+    content: attr(data-label);
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .seg-t1 { background: var(--tier1); }
+  .seg-t2 { background: var(--tier2); }
+  .seg-t3 { background: var(--tier3); }
+  .seg-t4 { background: var(--tier4); }
+  .seg-t5 { background: var(--tier5); }
+  .seg-t6 { background: var(--tier6); }
+  .seg-t7 { background: var(--tier7); }
+  .seg-t8 { background: var(--tier8); }
+
+  .legend { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+
+  .cost-good { color: var(--green); }
+  .cost-mid { color: var(--orange); }
+  .cost-high { color: var(--red); }
+
+  .preds-section { margin-top: 32px; }
+  .preds-section h2 { font-size: 18px; margin-bottom: 16px; }
+  .pred-model {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .pred-header {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+  }
+  .pred-header:hover { background: rgba(88, 166, 255, 0.04); }
+  .pred-body { padding: 0 16px 12px; display: none; }
+  .pred-body.open { display: block; }
+  .pred-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pred-tag {
+    background: var(--border);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+
+  .tier-labels { font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<h1>Predicate Extraction Benchmark</h1>
+<div class="subtitle">Source: Cooktown Mayors in the Eighties (1954) — 159 words &nbsp;|&nbsp; 8-tier extraction prompt</div>
+
+<div class="cards" id="summary-cards"></div>
+
+<div class="legend" id="legend"></div>
+
+<table id="main-table">
+  <thead><tr id="table-header"></tr></thead>
+  <tbody id="table-body"></tbody>
+</table>
+
+<div class="preds-section">
+  <h2>Predicates Minted</h2>
+  <div id="preds-list"></div>
+</div>
+
+<script>
+const PRICING = {"deepseek/deepseek-v4-pro":{"in":4.35e-7,"out":8.7e-7},"deepseek/deepseek-v4-flash":{"in":1.4e-7,"out":2.8e-7},"moonshotai/kimi-k2.6":{"in":7.5e-7,"out":0.0000035},"openai/gpt-5.4-mini":{"in":7.5e-7,"out":0.0000045},"nvidia/nemotron-3-super-120b-a12b":{"in":9e-8,"out":4.5e-7},"anthropic/claude-sonnet-4.6":{"in":0.000003,"out":0.000015},"nvidia/nemotron-3-nano-30b-a3b":{"in":5e-8,"out":2e-7},"mistralai/mistral-large-2512":{"in":5e-7,"out":0.0000015},"anthropic/claude-opus-4.5":{"in":0.000005,"out":0.000025},"x-ai/grok-4.1-fast":{"in":2e-7,"out":5e-7},"anthropic/claude-haiku-4.5":{"in":0.000001,"out":0.000005},"nvidia/llama-3.3-nemotron-super-49b-v1.5":{"in":1e-7,"out":4e-7},"qwen/qwen3-coder-plus":{"in":6.5e-7,"out":0.00000325},"nvidia/nemotron-nano-9b-v2":{"in":4e-8,"out":1.6e-7},"qwen/qwen3-coder":{"in":2.2e-7,"out":0.0000018},"google/gemini-2.5-flash-lite":{"in":1e-7,"out":4e-7},"x-ai/grok-4":{"in":0.000003,"out":0.000015},"mistralai/mistral-small-3.2-24b-instruct":{"in":7.5e-8,"out":2e-7},"google/gemini-2.5-flash":{"in":3e-7,"out":0.0000025},"google/gemini-2.5-pro":{"in":0.00000125,"out":0.00001},"deepseek/deepseek-r1-0528":{"in":5e-7,"out":0.00000215},"mistralai/mistral-medium-3":{"in":4e-7,"out":0.000002},"qwen/qwen3-30b-a3b":{"in":8e-8,"out":2.8e-7},"qwen/qwen3-8b":{"in":5e-8,"out":4e-7},"qwen/qwen3-14b":{"in":6e-8,"out":2.4e-7},"qwen/qwen3-32b":{"in":8e-8,"out":2.4e-7},"qwen/qwen3-235b-a22b":{"in":4.55e-7,"out":0.00000182},"openai/o4-mini":{"in":0.0000011,"out":0.0000044},"openai/gpt-4.1":{"in":0.000002,"out":0.000008},"openai/gpt-4.1-mini":{"in":4e-7,"out":0.0000016},"meta-llama/llama-4-maverick":{"in":1.5e-7,"out":6e-7},"meta-llama/llama-4-scout":{"in":8e-8,"out":3e-7},"deepseek/deepseek-chat-v3-0324":{"in":2e-7,"out":7.7e-7},"cohere/command-a":{"in":0.0000025,"out":0.00001},"google/gemma-3-27b-it":{"in":8e-8,"out":1.6e-7},"microsoft/phi-4":{"in":6.5e-8,"out":1.4e-7},"nvidia/llama-3.1-nemotron-70b-instruct":{"in":0.0000012,"out":0.0000012}};
+
+const TIER_COLORS = ['','#58a6ff','#3fb950','#d29922','#f0883e','#f85149','#bc8cff','#ff7b72','#d2a8ff'];
+const TIER_NAMES = ['','Surface Facts','Relational','Opinions','Epistemic','Pragmatic','Presuppositions','Philosophical','Intertextual'];
+// Quality scores: [ontoPrecision, tripleHygiene, groundingFidelity, tierAuthenticity, graphConnectivity]
+const QSCORES = {"anthropic/claude-opus-4.5":[9,8,9,9,9],"anthropic/claude-haiku-4.5":[6,4,7,8,4],"anthropic/claude-sonnet-4.6":[8,7,8,8,8],"x-ai/grok-4":[10,9,9,10,9],"x-ai/grok-4.1-fast":[9,9,9,8,9],"openai/gpt-5.4-mini":[8,9,8,7,9],"openai/gpt-4.1":[7,5,7,7,6],"openai/gpt-4.1-mini":[6,7,8,2,6],"openai/o4-mini":[7,7,7,5,7],"google/gemini-2.5-pro":[8,5,8,9,6],"google/gemini-2.5-flash":[7,6,7,6,6],"google/gemma-3-27b-it":[7,7,7,5,6],"deepseek/deepseek-v4-flash":[7,5,7,7,6],"deepseek/deepseek-chat-v3-0324":[5,4,7,5,4],"mistralai/mistral-large-2512":[8,9,8,7,8],"mistralai/mistral-medium-3":[5,7,7,6,7],"mistralai/mistral-small-3.2-24b-instruct":[4,5,5,2,5],"qwen/qwen3-coder-plus":[7,4,7,8,6],"qwen/qwen3-coder":[6,3,7,7,5],"qwen/qwen3-235b-a22b":[7,8,8,7,8],"qwen/qwen3-32b":[7,8,7,3,7],"qwen/qwen3-30b-a3b":[6,7,8,3,6],"qwen/qwen3-14b":[6,7,7,6,7],"qwen/qwen3-8b":[5,6,6,5,7],"meta-llama/llama-4-maverick":[6,7,6,3,6],"meta-llama/llama-4-scout":[5,5,7,4,5],"microsoft/phi-4":[5,5,7,5,3],"nvidia/nemotron-3-nano-30b-a3b":[7,5,5,5,7],"nvidia/nemotron-nano-9b-v2":[5,6,5,2,7],"nvidia/llama-3.3-nemotron-super-49b-v1.5":[8,8,7,7,8],"nvidia/llama-3.1-nemotron-70b-instruct":[6,5,7,4,5]};
+
+const DATA = [{"model":"anthropic/claude-opus-4.5","score":{"totalPredicates":170,"uniquePredicates":114,"tierDistribution":{"1":67,"2":29,"3":7,"4":9,"5":14,"6":16,"7":17,"8":11},"avgConfidence":0.9561764705882361,"maxTier":8,"predicateList":["acknowledgesUncertainty","addressesAudience","alludesToWork","alsoKnownAs","appearedOnPage","assertsAsFact","assumesReaderKnows","assumesThat","attendedEvent","backgroundAssumption","backgrounds","byline","careQuality","caredFor","causedBy","citesEvidence","claimsWithCertainty","commemorates","considersImportant","contemporaryWith","datelinedFrom","datelinedOn","definesTermFor","demonstratedHeroism","differentiatedFrom","distanceFrom","distinguishesFrom","drawsOnTradition","emphasizes","employsGenreConvention","employsRhetoricalHook","enthusiasticAbout","erectedToPerpetutate","essentializes","evaluatesAs","evidenceDatesTo","firstName","followsFormOf","foregrounds","framesAs","fromCity","fullName","gender","geographicScope","hadBody","hadGovernanceStructure","hadMayorOn","hadOffice","hasForm","hasMultipleSides","hasPurpose","hasTitle","heldConference","heldIn","heldOn","heldTitle","historicallyContextualizes","historyMadeThrough","holdsOpinion","impliesThat","inContrastTo","invokesNorm","isA","knowledgeBasedOn","ledTo","locatedIn","madeHistory","makesTransition","maritalStatus","mayorInYear","memberOf","membershipComprises","municipalityDuration","nameInscribedOn","narrativizes","notablyOmits","numberOfMayorsPresent","occurredBy","onDifferentSideFrom","onSideOf","ontologicallyCommittedTo","overlapsTemporally","parentOf","partOf","periodicizes","precedes","presupposesExistenceOf","presupposesThat","providesEvidenceOf","publishedDuring","publishedIn","publishedOn","referencesDecade","referencesMovement","reportedFrom","servesTelos","silentOn","situatesInDiscourse","supersededBy","surname","takesAsGiven","treatsAsEnduring","treatsAsEntity","treatsAsEstablished","treatsAsOccurrent","treatsAsSameEntity","usesAnalogy","valuesAs","visitedMonument","wasA","wasMayorOf","wasOn","workedFor","writtenForExpertise"],"factsPerKToken":9.675032724375392},"usage":{"promptTokens":2733,"completionTokens":14838,"totalTokens":17571},"durationMs":148837},{"model":"anthropic/claude-haiku-4.5","score":{"totalPredicates":152,"uniquePredicates":116,"tierDistribution":{"1":38,"2":20,"3":1,"4":13,"5":22,"6":21,"7":24,"8":13},"avgConfidence":0.8611842105263151,"maxTier":8,"predicateList":["addressesAudience","administrativeStatusIn1885","administrativeStatusIn1954","alludesToWork","appealsToAuthority","appealsToEmotion","assertsAsFact","assumesReaderKnows","attendedByMayorsFrom","backgrounds","buildsonArgument","byline","caredForChildOn","characterizesAs","citesEvidence","commemorates","commemoratesEvent","commemoratesHeroism","commemorationReason","considersOptional","conspicuouslyAbsent","contemporaryWith","contrastsTemporalPeriods","conversationallyImplicates","dateline","definesTermFor","demonstratedHeroism","describesHistoricalPeriod","distinguishesFrom","downplays","drawsHistoricalParallel","drawsOnTradition","emphasizes","employesGenreConvention","essentializes","eventOccurredOn","followsFormOf","foregrounds","framesAs","functionOf","hadMayorAndCouncil","hadMayorsOn","hadMunicipalGovernanceFor","hadTownCouncil","hasHistoricalMonument","hasInscribedNames","hasMainStreet","hasSides","hedgesClaim","heldConferenceIn","historicallyContextualizes","hostingEventOn","impliesThat","informedBy","invokesNorm","isObelisk","isPillar","knowledgeBasedOn","locatedIn","locatedNearCooktown","madeHistory","mayorTermYear","mergeConcepts","municipalStatusChangedFrom","municipalStatusEvidencedFrom","nameAppearsOn","nameInscribedOn","narrativizesTransition","naturalizes","normativelyCharges","notablyOmits","occurredOn","ontologicallyCommittedTo","periodicizes","presupposesThat","providesEvidenceFor","publicationLocation","publicationYears","publishedIn","publishedOn","publishedOnPage","qualifiesStatement","reifiesAs","repeatsForEffect","respondsToPiece","sentMayorTo","servedAsAlderman","servesAs","servesTelos","silentOn","situatesInDiscourse","splitsConcept","statesAsEstablished","supportsClaimWith","takesAsGiven","takesForGranted","temporallyFrames","titleHeld","transitionedFrom","treatsAsAccidentalProperty","treatsAsEnduring","treatsAsEntity","treatsAsEssentialProperty","treatsAsGood","treatsAsHistoricallySignificant","treatsAsNecessary","treatsAsNonNegotiable","treatsAsOccurrent","treatsAsProcess","treatsAsProperty","usesAnalogy","usesMonumentAs","valuesAs","wasHistoricallyMunicipality","wasMayorOf","writtenForExpertise"],"factsPerKToken":8.557113100264596},"usage":{"promptTokens":2733,"completionTokens":15030,"totalTokens":17763},"durationMs":72405},{"model":"x-ai/grok-4","score":{"totalPredicates":128,"uniquePredicates":118,"tierDistribution":{"1":46,"2":22,"3":9,"4":9,"5":11,"6":10,"7":11,"8":10},"avgConfidence":0.9828125000000002,"maxTier":8,"predicateList":["acknowledgesUncertainty","addressesAudience","adjacentTo","alludesToWork","assertsAsFact","associatedDate","associatedWithConference","authorOf","backgroundAssumption","backgrounds","caused","characterizesAs","citesEvidence","claimsWithCertainty","coincidedWith","considersImportant","conspicuouslyAbsent","contains","contemporaryWith","contrasts","countOfMayors","counterfactuallyAssumes","datelineDate","datelineLocation","datesBackTo","deemedNecessary","describedAs","describes","designedFor","differentFrom","distinguishesFrom","drawsHistoricalParallel","drawsOnTradition","durationOf","echoesPosition","emphasizes","employsGenreConvention","enthusiasticAbout","erectedToPerpetuate","essentializes","evaluatesAs","evidenceType","existedFor","failsToMention","foregrounds","foundOn","fromLocations","hadDuration","hadEvent","hadMayor","hadTownCouncil","hasAnotherSideWithName","hasChild","hasMainStreet","hasPart","hasPurpose","hasSideWithName","heldConferenceIn","heldOn","historicallyContextualizes","holdsOpinion","honorific","implicitlyAssumes","impliesThat","inEarlierDays","informedBy","informs","invokesNorm","involvedMayorFrom","isA","judgesAs","ledTo","listedOnSide","locatedIn","locatedWithin","madeHistoryThrough","narrativizes","notablyOmits","occurredOn","occurredOnDay","oughtTo","pageNumber","partOf","periodicizes","perpetuatedBy","precededBy","precedes","presupposesExistenceOf","presupposesThat","promotes","providesEvidenceOf","publicationYears","publishedIn","publishedInRegion","publishedOn","qualifies","ratesAs","referencesMovement","reifiesAs","respondsToPiece","roleAs","siteOf","situatesInDiscourse","statesAsEstablished","suggestsPossibility","suggestsWithoutStating","supports","takesAsGiven","takesForGranted","temporallyOverlaps","titleHeld","treatsAsEnduring","treatsAsEntity","treatsAsGood","usesContrast","usesRepetition","valuesAs","wasA"],"factsPerKToken":10.061311114604623},"usage":{"promptTokens":2823,"completionTokens":9899,"totalTokens":12722},"durationMs":164609},{"model":"anthropic/claude-sonnet-4.6","score":{"totalPredicates":122,"uniquePredicates":94,"tierDistribution":{"1":53,"2":17,"3":4,"4":6,"5":11,"6":14,"7":9,"8":8},"avgConfidence":0.9307377049180328,"maxTier":8,"predicateList":["addressesAudience","age","alludesToWork","appealsToAuthority","assertsAsFact","backgroundsContext","causedBy","citesEvidence","commemoratedFor","considersImportant","contemporaryWith","contrastsPast","conversationallyImplicates","datelinedFrom","datelinedOn","definesTermFor","demonstratedQuality","differentiatedFrom","directedToward","drawsHistoricalParallel","drawsOnTradition","durationApproximately","emphasizes","employsGenreConvention","erectedToCommemorate","essentializes","evaluatesAs","evaluatesMrsWatsonAs","evidenceDateOf","existedDuring","existedInEarlierDays","foregrounds","framesAs","fullName","hadBody","hadChild","hadMayorCount","hadRole","hadTwoMayorsSimultaneously","hasPart","hasPurpose","hedgesClaim","heldIn","heldTitle","historicallyContextualizes","implicitlyAssumes","impliesThat","inscriptionDate","invokesNorm","isA","knowledgeBasedOn","ledTo","locatedIn","locatedOnSideOf","madeHistory","madeHistoryThrough","morallyFrames","nameInscribedOn","narrativizes","notablyOmits","occurredAt","occurredBy","occurredOn","ontologicallyCommittedTo","organisedBy","originatedFrom","periodizesAs","precedes","presupposesExistenceOf","presupposesThat","providesEvidenceOf","publicationPeriod","publishedIn","publishedOn","publishedOnPage","reifiesConcept","reportedFrom","roleAt","servedAsMayor","servesFunctionOf","silentOn","situatesInDiscourse","structuresNarrativeAs","survivedUntil","titledAs","treatsAsEnduring","treatsAsGood","treatsAsOccurrent","treatsMonumentAs","usesMonumentAsRhetoricalAnchor","wasA","wasPresentAt","writtenBy","writtenDayBefore"],"factsPerKToken":8.533258725606771},"usage":{"promptTokens":2734,"completionTokens":11563,"totalTokens":14297},"durationMs":132719},{"model":"qwen/qwen3-coder","score":{"totalPredicates":112,"uniquePredicates":87,"tierDistribution":{"1":46,"2":18,"3":8,"4":8,"5":9,"6":9,"7":8,"8":6},"avgConfidence":0.8749999999999997,"maxTier":8,"predicateList":["acknowledgesHistoricalChange","acknowledgesUncertainty","addressesAudience","assertsAsFact","backgrounds","claimsWithCertainty","commemorates","commemoratesHistoricalFigure","comparesHistoricalWithContemporary","contains","contrastsHistoricalWithContemporary","datelineLocation","describes","documentsHistoricalEvidence","documentsHistoricalGovernance","drawsHistoricalParallel","emphasizes","emphasizesHistoricalContinuity","employsGenreConvention","employsNarrativeConvention","erectedToPerpetuateHeroismOf","exemplifiesMaternalDevotion","existedAsMunicipalitySince","foregrounds","framesAsLocalHistoricalInterest","hadMayorAndTownCouncil","hadTwoMayorsOn","hasHistoricalGovernanceStructure","hasHistoricalPeriod","hasHistoricalSignificance","hasInscription","hasMainStreet","hasMember","hasMonumentInMainStreet","hasNameOf","hasNamesOfMayors","hasPageNumber","hasPart","hasPillar","heldIn","heldOn","highlightsHistoricalContinuity","hostedConferenceOf","informsAbout","informsThrough","invokesCulturalNorm","isA","isObelisk","lacksEvidenceFor","locatedIn","locationOfHeroicEvent","madeHistoryThrough","maintainsHistoricalMemory","memberOf","mentions","mentionsHistoricalPeriod","ontologicallyCommittedTo","partOf","presupposesExistenceOf","presupposesThat","providedMayorTo","publishedIn","publishedOn","referencesCulturalNorm","referencesHistoricalMunicipalRecords","refersToTimePeriod","reifiesAs","reportsOn","servedAsMayorIn","servesAsHistoricalRecord","silentlyAssumes","situatesInDiscourse","statesAsEstablished","suggestsPossibility","temporallyPrecedes","transitionedFromMunicipalToRegionalGovernance","transitionedTo","treatsAsEntity","treatsAsEssentialProperty","treatsAsGood","treatsAsImportant","usesAsEvidence","valuesAs","valuesLocalHistoricalDocumentation","wasMunicipalityFor","writtenBy","writtenFor"],"factsPerKToken":9.710421362926997},"usage":{"promptTokens":2257,"completionTokens":9277,"totalTokens":11534},"durationMs":46848},{"model":"qwen/qwen3-coder-plus","score":{"totalPredicates":107,"uniquePredicates":91,"tierDistribution":{"1":39,"2":16,"3":9,"4":9,"5":7,"6":9,"7":9,"8":9},"avgConfidence":0.9738317757009348,"maxTier":8,"predicateList":["addressesLocalAudience","alsoCommemoratesMayors","assertsAsFact","assumesReadersKnow","believesThat","bringsTogether","buildsOnArgument","characterizesAsHeroic","citesEvidence","commemoratesMrsWatson","comparesPastAndPresent","considersMonumentImportant","containsNames","contemporaryWith","dateOnObelisk","dateOnPillar","datelineDate","datelineLocation","datingBackTo","demonstratedThrough","dependentOn","drawsOnTradition","durationAsMunicipality","emphasizesHistoricalContinuity","employsGenreConvention","employsHistoricalNarrative","enabledBy","erectedToPerpetuateHeroism","evidenceOfMunicipality","existsDuring","followsFormOf","foregroundsHistoricalConnection","foundOn","framesAsHistoricalSignificance","framesMrsWatsonAsHero","fromBowen","fromTownsville","hadMayor","hadTownCouncil","hadTwoMayorsOnFriday","hasDate","hasMultipleSides","hasName","heldOn","historicallyContextualizes","impliesCommunityPride","impliesThat","invokesNorm","isAlderman","isObelisk","isPillar","locatedIn","location","locationOf","madeHistory","municipalityPeriodEnded","ontologicallyCommittedTo","pageNumber","periodicizes","presentsMrsWatsonAsHistoricalFigure","presupposesExistenceOf","presupposesThat","publicationYears","publishedIn","publishedOn","referencesMovement","reifiesAs","sameTimeAs","servesAsHistoricalRecord","showedHeroism","showedUnremittingCare","situatesInDiscourse","state","suggestsLocalGovernmentImportance","supportsClaimWith","takesForGranted","treatsAsEnduring","treatsAsEntity","treatsAsGood","treatsAsProcess","treatsAsReal","treatsMunicipalityAsSignificant","usesChronologicalStructure","valuesAs","valuesHistoricalPreservation","viewsMayorsAsWorthyOfRecord","wasAMunicipality","wasMayor","wasOnLizardIsland","whenConferenceHeld","writtenBy"],"factsPerKToken":10.108644307982996},"usage":{"promptTokens":2257,"completionTokens":8328,"totalTokens":10585},"durationMs":127299},{"model":"google/gemini-2.5-pro","score":{"totalPredicates":93,"uniquePredicates":80,"tierDistribution":{"1":37,"2":12,"3":5,"4":6,"5":8,"6":9,"7":9,"8":7},"avgConfidence":0.981720430107527,"maxTier":8,"predicateList":["acknowledgesUncertainty","advocatesFor","assertsAsFact","associatedWithDate","assumesReaderKnows","assumesThat","authorOf","axiologically","backgrounds","believesThat","caredFor","childOf","citesEvidence","citesSource","contemporaryWith","conversationallyImplicates","datelineDate","definesTermFor","drawsOnTradition","emphasizes","employsGenreConvention","endorsesViewOf","erectedToPerpetuate","evaluatedAs","evaluatesAs","foregrounds","framesAs","fromCity","hadGoverningBody","hadLeaderRole","hadStatusDuration","hadVisitorCount","hadVisitorRole","hasDateline","hasInscriptionOfDate","hasInscriptionOfName","hasPart","hasPurpose","hasTitle","hedgesClaim","historicallyContextualizes","impliesThat","inContrastTo","instanceOf","interpretsTextOf","isA","judgedAs","knowledgeBasedOn","locatedIn","locatedOnDifferentSideThan","madeHistory","madeHistoryAsResultOf","makesComparison","notablyOmits","occurredIn","occurredOn","partOf","periodicizes","positionHeld","precedes","presupposesExistenceOf","presupposesThat","providesEvidenceDatingTo","publicationDateRange","publishedIn","publishedOn","publishedOnPage","reifiesAs","resultedFrom","servesTelos","situatesInDiscourse","succeededBy","supportedBy","takesAsGiven","treatsAsEnduring","treatsAsEntity","treatsAsOccurrent","treatsAsSameEntity","wasFormerly","wasLocatedOn"],"factsPerKToken":5.343906223064989},"usage":{"promptTokens":2230,"completionTokens":15173,"totalTokens":17403},"durationMs":123042},{"model":"openai/gpt-4.1","score":{"totalPredicates":88,"uniquePredicates":65,"tierDistribution":{"1":36,"2":16,"3":3,"5":6,"6":12,"7":10,"8":5},"avgConfidence":0.990909090909091,"maxTier":8,"predicateList":["addressesAudience","alludesToWork","attendedByMayorsFrom","componentOf","considersImportant","contemporaryWith","dateOnMonument","datelined","datesBackTo","differentiatedFrom","drawsOnTradition","emphasizes","employsGenreConvention","enabledMayorsToBeInCooktown","erectedToPerpetuate","evaluatesAs","foregrounds","foundOn","framesAs","hadMayor","hadMayorsFrom","hadMayorsOn","hadTownCouncil","hasInscription","hasName","hasNameOf","hasPart","hasSideWithName","heldIn","heldOn","holdsOpinion","isAlderman","isObelisk","isPillar","locatedIn","madeHistoryBy","madeOf","morallyFrames","occurredOn","partOf","periodicizes","perpetuatedBy","precedes","presupposesExistenceOf","presupposesThat","publishedIn","publishedOn","resultedFrom","resultsIn","situatesInDiscourse","treatsAsAccidentalProperty","treatsAsDurativeProcess","treatsAsEnduring","treatsAsEntity","treatsAsEssentialProperty","treatsAsOccurrent","treatsAsProcess","usesWeaselWord","valuesAs","wasMayorOf","wasMotherOf","wasMunicipalityForDuration","wasMunicipalityInPast","wasWith","writtenBy"],"factsPerKToken":9.332909110191961},"usage":{"promptTokens":2204,"completionTokens":7225,"totalTokens":9429},"durationMs":53742},{"model":"mistralai/mistral-small-3.2-24b-instruct","score":{"totalPredicates":80,"uniquePredicates":27,"tierDistribution":{"1":18,"2":62},"avgConfidence":0.8299999999999986,"maxTier":2,"predicateList":["associatedWithLocation","caredForChild","commemorates","hadDurationAsMunicipality","hadMayor","hadMayors","hasDate","hasHistoricalAction","hasHistoricalDuration","hasHistoricalEvidence","hasHistoricalFeature","hasHistoricalImpact","hasHistoricalLocation","hasHistoricalMayors","hasHistoricalPeriod","hasHistoricalPosition","hasHistoricalSignificance","hasMonument","hasName","heldPosition","hostedConference","locatedIn","madeHistory","performedAction","providesEvidenceFor","visitedLocation","wasMunicipality"],"factsPerKToken":8.56898029134533},"usage":{"promptTokens":2305,"completionTokens":7031,"totalTokens":9336},"durationMs":156456},{"model":"mistralai/mistral-large-2512","score":{"totalPredicates":78,"uniquePredicates":57,"tierDistribution":{"1":36,"2":14,"3":5,"4":3,"5":5,"6":5,"7":5,"8":5},"avgConfidence":0.9846153846153846,"maxTier":8,"predicateList":["assertsAsFact","associatedWithYear","assumesReaderKnows","authoredBy","citesEvidenceFor","commemorates","considersImportant","contemporaryWith","datedTo","drawsOnTraditionOf","employsGenreConventionOf","erectedToPerpetuate","evaluatesAsHeroic","evaluatesAsHistoricallySignificant","framesAsCommemorative","framesAsHistorical","governed","hadAttendeeFrom","hadDurationAsMunicipality","hadEventOn","hadGovernanceBody","hasDateline","hasEvidenceOfMunicipality","hasInscriptionOf","hasMainStreet","hasPublicationDateRange","hasRole","heldBy","heldPositionOf","highlightsContrastBetween","historicallyContextualizes","historicallyHad","impliesThat","involvesPerson","isA","locatedIn","locatedOn","madeHistoryDueTo","occurredAt","ontologicallyCommittedTo","operatesInRegion","partOfGovernance","precedesPublicationOf","presupposesExistenceOf","presupposesThat","providesEvidenceFor","publishedIn","publishedOn","referencesMovement","reifiesAs","reportsEvent","servedAsMayorDuring","servesPurposeOf","situatesInDiscourseOf","transitionedFrom","treatsAsEntity","wasA"],"factsPerKToken":8.74341441542428},"usage":{"promptTokens":2305,"completionTokens":6616,"totalTokens":8921},"durationMs":80513},{"model":"x-ai/grok-4.1-fast","score":{"totalPredicates":76,"uniquePredicates":68,"tierDistribution":{"1":35,"2":11,"3":3,"4":5,"5":6,"6":6,"7":3,"8":7},"avgConfidence":0.9684210526315793,"maxTier":8,"predicateList":["alludesToEra","appearedOnPage","assertsAsFact","associatedWithDate","assumesReaderKnows","authoredBy","backgroundsModernEvent","citesSource","coincidesTemporallyWith","componentOf","considersSignificant","consistsOf","contrastsPresentWithPast","datelinedFrom","demonstratedHeroismThrough","directEvidenceDatingTo","drawsHistoricalParallelTo","employsContrast","employsGenreConvention","erectedToPerpetuate","evaluatesAsHeroic","foregroundsHistoricalFact","hadMayor","hadMayorsPresent","hadTownCouncil","hasTitle","heldOnDate","heldTitle","historicallyContextualizesWith","hosted","impliesThat","informsAbout","inscribesNameOf","isObelisk","knowledgeBasedOn","lastedApproximately","locatedIn","locatedOn","madeHistoryAsResultOf","municipalityDuration","notablyOmits","organizedBy","partOf","precedes","precedesTemporally","presentOnDate","presupposesExistenceOf","presupposesThat","providesDirectEvidenceFor","publishedDuringPeriods","publishedIn","publishedOn","referencesHistoricalEvent","refersToPeriod","reifiesAs","reportedFromDate","reportsAsEstablished","residedTemporarilyOn","resultsIn","situatesInDiscourse","supportsClaimWith","takesAsGiven","temporallyOverlapsWith","treatedAsPropertyOf","treatsAsEnduring","wasMayorOf","wasMunicipality","within"],"factsPerKToken":7.248450166905102},"usage":{"promptTokens":2294,"completionTokens":8191,"totalTokens":10485},"durationMs":52031},{"model":"deepseek/deepseek-v4-flash","score":{"totalPredicates":72,"uniquePredicates":55,"tierDistribution":{"1":40,"2":7,"3":3,"4":5,"5":3,"6":8,"7":3,"8":3},"avgConfidence":0.9833333333333333,"maxTier":8,"predicateList":["assertsAsFact","belongsTo","careForChildEvaluatedPositively","caredForChildWith","citesEvidence","claimsWithCertainty","datesFrom","employsSpecificDetail","erectedToPerpetuateHeroismOf","evaluatedAsHero","exists","framesMonumentAsEvidence","hadChild","hadMayor","hadTownCouncil","hadVisitingMayorFrom","hadVisitingMayorsOn","hasByline","hasDateline","hasMayor","hasMayorsInDecade","hasName","hasPurpose","hasSide","implicitlyAssumes","impliesThatMayorsWereInOffice1885","isA","locatedIn","locatedOn","madeHistory","mayorInDecade","mayorInYear","mayorOf","municipalityDuration","narrativizesHistory","occurredOn","originatesFromHistoricalNewspaper","partOf","presupposesExistenceOf","presupposesThatFridayExisted","providesEvidenceFor","publishedIn","publishedOn","referencesHistoricalArtifact","referencesHistoricalEvent","reifiesConcept","temporallyPrecedes","title","titleIs","treatsAsFact","usesContrastiveMarker","visited","wasMunicipality","wasOn","yearOnMonument"],"factsPerKToken":4.04949381327334},"usage":{"promptTokens":2220,"completionTokens":15560,"totalTokens":17780},"durationMs":174981},{"model":"google/gemini-2.5-flash","score":{"totalPredicates":71,"uniquePredicates":50,"tierDistribution":{"1":45,"2":9,"3":2,"4":3,"5":2,"6":5,"7":3,"8":2},"avgConfidence":0.9760563380281689,"maxTier":8,"predicateList":["assertsAsFact","associatedWithDate","authoredBy","cameFrom","citesEvidence","considersImportant","datelineDate","datesBackTo","drawsOnTradition","emphasizes","erectedToPerpetuate","focusesOn","foundOn","frames","had","hadMayorsOn","hadNumberOfMayors","hadPastPoliticalStructure","hasDateline","hasDirectEvidence","hasNamesOfMayors","hasPageNumber","hasTitle","impliesContrastBetween","impliesThat","isA","isKnownFor","locatedIn","madeHistoryAsResultOf","nameOn","ontologicallyCommittedTo","organizedBy","partOf","performedActionsOn","presupposesThat","providesHistoricalInformationAbout","publishedFrom","publishedIn","publishedOn","publishedUntil","represents","showedCareTo","situatesInDiscourse","treatsAsEntity","treatsAsEssentialProperty","usesEvidenceFrom","values","wasDayOf","wasMunicipalityForDuration","wasMunicipalityInEarlierDays"],"factsPerKToken":7.6237517448727585},"usage":{"promptTokens":2230,"completionTokens":7083,"totalTokens":9313},"durationMs":28300},{"model":"openai/o4-mini","score":{"totalPredicates":69,"uniquePredicates":50,"tierDistribution":{"1":44,"2":12,"4":1,"5":4,"6":2,"7":3,"8":3},"avgConfidence":0.9231884057971014,"maxTier":8,"predicateList":["addressesAudience","alludesTo","assertsAsFact","attendedEvent","causedBy","commemoratesHeroismOf","datesBackTo","framesAs","hadDualMayorshipOnDay","hadGovernanceStructure","hadMayorInstitution","hadNumberOfMayorsOnDay","hadSubject","hadTownCouncil","hasByline","hasDatelineDate","hasDatelinePlace","hasInscriptionOf","hasLastName","hasName","hasPageNumber","hasPublicationDate","hasPurpose","hasSource","hasTitle","heldInPlace","heldOnDay","hostedMayorFrom","inscriptionDate","instanceOf","isA","isPartOf","locatedIn","madeHistoryAsResultOf","makesContrastBetween","overlapsPartiallyWith","partOf","preceded","precedes","presupposesThat","providesDirectEvidenceFor","references","situatedIn","tookPlaceAt","treatedAsEntity","usesGenreConvention","valuesAs","wasErectedToPerpetuate","wasMayorOf","wasMunicipalityForDurationYears"],"factsPerKToken":5.7624853850008355},"usage":{"promptTokens":2203,"completionTokens":9771,"totalTokens":11974},"durationMs":72943},{"model":"openai/gpt-5.4-mini","score":{"totalPredicates":65,"uniquePredicates":48,"tierDistribution":{"1":26,"2":15,"4":5,"5":3,"6":7,"7":4,"8":5},"avgConfidence":0.9203076923076926,"maxTier":8,"predicateList":["approximatelyEquals","assertsAsFact","citesSource","coincidedWith","commemorates","contains","datedOnMonumentAs","datesBackTo","drawsOnTradition","durationAsMunicipality","emphasizes","foregrounds","framesAs","hadEarlierDaysAs","hadExistenceInEarlierDays","hadInstitution","hadMayorsFrom","hadNumberOfMayors","hasHistoricalPeriod","hasInscription","hasTelos","heldIn","heroismWasPerpetuatedBy","included","isA","isFoundOn","isRememberedFor","locatedIn","madeHistoryBy","names","occurredOn","performedAction","presupposesExistenceOf","presupposesThat","referencesWork","reifiesAs","servesAsEvidenceFor","situatesInDiscourse","suggestsWithoutStating","supportsClaimThat","treatsAsEnduring","treatsAsReal","usesDatelineConvention","usesToSupport","wasA","wasDoneWhile","wasErectedTo","wasMayorOf"],"factsPerKToken":11.32206932590141},"usage":{"promptTokens":2203,"completionTokens":3538,"totalTokens":5741},"durationMs":20638},{"model":"nvidia/llama-3.3-nemotron-super-49b-v1.5","score":{"totalPredicates":52,"uniquePredicates":43,"tierDistribution":{"1":23,"2":4,"3":1,"4":3,"5":8,"6":5,"7":5,"8":3},"avgConfidence":0.8826923076923078,"maxTier":8,"predicateList":["acknowledgesUncertainty","addressesTopic","assertsAsFact","associatedWith","backgrounds","commemoratesEvent","constitutedBy","datelinedIn","demonstratedHeroismDuring","duration","employsGenreConvention","employsTone","evaluatesAs","foregrounds","framesAs","hadMayor","hasInscription","hasPurpose","heldConferenceOn","historicalPeriodReferenced","historicallyContextualizes","holdsTitle","locatedIn","locatedOn","madeOf","mentionsEvent","omitsDetail","performedAction","presupposesExistenceOf","presupposesThat","publishedOn","refersTo","reifiesAs","servedAsMayorIn","servedDuring","servesAsHistoricalEvidence","symbolizes","treatsAsEntity","treatsAsProcess","usesAnalogy","usesEvidence","wasMunicipalityForDuration","writtenBy"],"factsPerKToken":6.731391585760518},"usage":{"promptTokens":2238,"completionTokens":5487,"totalTokens":7725},"durationMs":105375},{"model":"mistralai/mistral-medium-3","score":{"totalPredicates":49,"uniquePredicates":37,"tierDistribution":{"1":18,"2":17,"5":3,"6":3,"7":3,"8":5},"avgConfidence":0.9673469387755097,"maxTier":8,"predicateList":["assumesReaderKnows","commemoratesEvent","containsNamesOfMayors","dateline","durationAsMunicipality","erectedToPerpetuate","hadMayor","hadMayorDuring","hadMayorsFrom","hadTownCouncil","hadTownCouncilDuring","hasDate","hasEvidenceOfMunicipality","hasName","hasPart","hostedEvent","impliesHistoricalSignificance","locatedIn","madeHistoryFor","mentionsEvent","mentionsLocation","mentionsObject","mentionsPerson","occurredOn","providesEvidenceOf","providesHistoricalContext","providesHistoricalInformation","publishedIn","publishedOn","referencesHistoricalEvent","referencesHistoricalFigures","situatesInHistoricalContext","treatsAsHistoricalFact","wasMunicipality","wasMunicipalityDuring","writtenBy","writtenFor"],"factsPerKToken":7.780247697681803},"usage":{"promptTokens":2305,"completionTokens":3993,"totalTokens":6298},"durationMs":66907},{"model":"nvidia/nemotron-3-nano-30b-a3b","score":{"totalPredicates":38,"uniquePredicates":32,"tierDistribution":{"1":14,"2":3,"3":4,"4":2,"5":2,"6":4,"7":1,"8":8},"avgConfidence":0.8894736842105261,"maxTier":8,"predicateList":["assertsAsFact","attended","caredForChildOn","citesSource","commemorates","datesBackTo","evaluatedAs","framesAs","hadMayorsCount","hadMunicipalityDuration","hadParticipant","hadTownCouncil","hasByline","hasTitle","heldOn","inscribedWith","inscriptionDate","invokesPresupposition","isAttributedTo","locatedIn","madeHistoryAsResultOf","originatedFrom","pageNumber","presupposesThat","providesEvidenceFor","publishedIn","publishedOn","references","situatesInDiscourse","wasErectedToPerpetuate","wasMayorOf","wasMunicipality"],"factsPerKToken":2.703471826977803},"usage":{"promptTokens":2316,"completionTokens":11740,"totalTokens":14056},"durationMs":109195},{"model":"qwen/qwen3-32b","score":{"totalPredicates":30,"uniquePredicates":22,"tierDistribution":{"1":23,"2":1,"3":1,"4":1,"5":1,"6":1,"7":1,"8":1},"avgConfidence":0.9633333333333332,"maxTier":8,"predicateList":["assertsAsFact","bylineRole","causedBy","dateOfPosition","dateline","erectedOn","evaluatesAs","heroism","instanceOf","locatedIn","memberOf","occurredOn","organizedBy","positionHeld","presentAt","presupposesThat","publishedOn","purpose","references","reportsOn","treatsAsEntity","wasMunicipalityFor"],"factsPerKToken":4.489001945234176},"usage":{"promptTokens":2258,"completionTokens":4425,"totalTokens":6683},"durationMs":90211},{"model":"qwen/qwen3-235b-a22b","score":{"totalPredicates":30,"uniquePredicates":25,"tierDistribution":{"1":13,"2":6,"3":1,"4":1,"5":4,"6":1,"7":2,"8":2},"avgConfidence":0.9280000000000003,"maxTier":8,"predicateList":["conferenceOccurredOn","contains","contemporaryWith","differentFrom","emphasizes","employsHistoricalComparison","erectedToPerpetuate","hadMayor","hasComponent","hasDate","hasHistoricalEvidence","hasName","heldConference","historicallyContextualizes","locatedIn","performedHeroism","presupposesExistenceOf","publishedIn","publishedOn","referencesArtifact","reifiesAs","treatsAsEntity","valuesAsHistoricalEvidence","wasMunicipality","writtenBy"],"factsPerKToken":5.704506560182544},"usage":{"promptTokens":2257,"completionTokens":3002,"totalTokens":5259},"durationMs":42454},{"model":"deepseek/deepseek-chat-v3-0324","score":{"totalPredicates":29,"uniquePredicates":26,"tierDistribution":{"1":19,"2":3,"3":2,"5":2,"6":1,"7":2},"avgConfidence":0.9620689655172413,"maxTier":7,"predicateList":["caredForChild","containsDate","containsName","demonstratedHeroism","emphasizes","erectedToCommemorate","eventLocation","framesAsHistorical","hadMunicipalGovernmentDuration","hadNumberOfMayors","hasByline","hasDateline","hasMultipleSides","heldConference","isObelisk","locatedIn","madeHistory","occurredOn","presupposesThat","publishedIn","publishedOn","reifiesAs","treatsAsEntity","wasAlderman","wasMayor","wasMunicipality"],"factsPerKToken":6.174153715137321},"usage":{"promptTokens":2219,"completionTokens":2478,"totalTokens":4697},"durationMs":68944},{"model":"google/gemma-3-27b-it","score":{"totalPredicates":28,"uniquePredicates":23,"tierDistribution":{"1":19,"2":3,"3":1,"6":3,"7":2},"avgConfidence":0.760714285714286,"maxTier":7,"predicateList":["authoredArticle","bearsNameOf","caredForChildOn","erectedToPerpetuate","hadMayorAndCouncil","hadMayorsOnDay","heldConferenceAt","heldOfficeInYear","implicitlyAssumes","isLocatedIn","locatedIn","locatedInArea","madeHistoryDueTo","ontologicallyCommittedTo","presupposesExistenceOf","providesEvidenceFor","publishedOnDate","reportsOnPastEvent","sentMayorTo","servesPurposeOf","treatsAsEntity","wasMayorOf","wasMunicipalityForDuration"],"factsPerKToken":5.720122574055159},"usage":{"promptTokens":2244,"completionTokens":2651,"totalTokens":4895},"durationMs":66492},{"model":"qwen/qwen3-30b-a3b","score":{"totalPredicates":25,"uniquePredicates":20,"tierDistribution":{"1":18,"2":2,"4":1,"5":1,"6":1,"7":1,"8":1},"avgConfidence":0.992,"maxTier":8,"predicateList":["addressesAudience","authorOf","containedNamesOfMayors","containedNamesOnDifferentSides","datedBackTo","erectedToPerpetuateHeroismOf","hadDateOf","hadMayorAndTownCouncil","hadTwoMayorsFrom","hadTwoMayorsOn","hadTwoSides","historicallyContextualizes","hostedConferenceOf","locatedIn","presupposesExistenceOf","supportsClaimWith","treatsAsEntity","wasAlderman","wasMunicipalityForHalfCentury","wasNamedOnObelisk"],"factsPerKToken":5.060728744939271},"usage":{"promptTokens":2257,"completionTokens":2683,"totalTokens":4940},"durationMs":33691},{"model":"openai/gpt-4.1-mini","score":{"totalPredicates":24,"uniquePredicates":18,"tierDistribution":{"1":24},"avgConfidence":0.9875000000000002,"maxTier":1,"predicateList":["associatedWithYear","datelinedAt","erectedToPerpetuate","hadMayor","hadRole","hadTwoMayorsOn","hasInscription","hasPart","heldBy","heldOn","heldTitle","locatedIn","madeHistoryBy","namedOn","presentAt","publishedIn","publishedOn","writtenBy"],"factsPerKToken":5.717008099094807},"usage":{"promptTokens":2204,"completionTokens":1994,"totalTokens":4198},"durationMs":28149},{"model":"microsoft/phi-4","score":{"totalPredicates":22,"uniquePredicates":19,"tierDistribution":{"1":14,"2":5,"6":2,"7":1},"avgConfidence":0.9454545454545453,"maxTier":7,"predicateList":["commemoratesEvent","dateOnObelisk","erectedToPerpetuate","framesAs","hadMayorAndTownCouncil","hadMayorsOn","hadMunicipalityStatusSince","hasNamesOf","heldOn","impliesHistoricalSignificance","locatedIn","madeHistoryDueTo","nameOn","organizedBy","originatedFrom","presupposesMunicipalityStatus","relatedTo","servedAs","wasMunicipalityFor"],"factsPerKToken":5.207100591715976},"usage":{"promptTokens":2230,"completionTokens":1995,"totalTokens":4225},"durationMs":23981},{"model":"qwen/qwen3-14b","score":{"totalPredicates":21,"uniquePredicates":18,"tierDistribution":{"1":12,"2":2,"3":2,"4":1,"6":1,"7":1,"8":2},"avgConfidence":0.9166666666666666,"maxTier":8,"predicateList":["assertsAsFact","electedInYear","erectedToPerpetuate","evaluatesAs","functionOf","hadMayorOnDate","hasDate","hasHistoricalEvent","hasPart","hasPurpose","hostedEventOnDate","locatedIn","mentionsEvent","presupposesExistenceOf","publishedIn","servedAsMayorOf","wasContextualizedIn","wasMunicipalityUntil"],"factsPerKToken":4.411764705882353},"usage":{"promptTokens":2258,"completionTokens":2502,"totalTokens":4760},"durationMs":162094},{"model":"meta-llama/llama-4-maverick","score":{"totalPredicates":20,"uniquePredicates":17,"tierDistribution":{"1":16,"2":2,"8":2},"avgConfidence":0.805,"maxTier":8,"predicateList":["citesSource","commemorates","displayedHeroism","drawsHistoricalParallel","existedAsMunicipality","hadConferenceAttendeesFrom","hadMayor","hasMonument","heldOffice","hostedConference","isLocatedIn","precedes","publishedOn","wasHeldIn","wasMunicipalityForDuration","wasOn","writtenBy"],"factsPerKToken":5.184033177812338},"usage":{"promptTokens":2208,"completionTokens":1650,"totalTokens":3858},"durationMs":15973},{"model":"qwen/qwen3-8b","score":{"totalPredicates":19,"uniquePredicates":14,"tierDistribution":{"1":11,"2":2,"4":1,"5":1,"6":2,"7":1,"8":1},"avgConfidence":0.9499999999999996,"maxTier":8,"predicateList":["datedIn","erectedToPerpetuateHeroism","hadMayor","hadMayorsFrom","hasDirectEvidence","hasNameOf","hasSideWithName","locatedInMainStreet","madeHistoryDueToCare","presupposesExistenceOf","referencesMonument","reportsOn","treatsAsEntity","wasMunicipality"],"factsPerKToken":3.962460896767466},"usage":{"promptTokens":2257,"completionTokens":2538,"totalTokens":4795},"durationMs":32263},{"model":"meta-llama/llama-4-scout","score":{"totalPredicates":19,"uniquePredicates":16,"tierDistribution":{"1":15,"2":2,"3":2},"avgConfidence":0.8842105263157897,"maxTier":3,"predicateList":["datesBackTo","erectedIn","erectedToPerpetuate","existedAsMunicipality","hadHistoricalSignificance","hadMayor","hadMayors","hadMonument","heldConference","heldPosition","locatedIn","mentionedOn","servedPurpose","wasMayorOf","wasMunicipality","wasPartOf"],"factsPerKToken":4.914640455250905},"usage":{"promptTokens":2206,"completionTokens":1660,"totalTokens":3866},"durationMs":27642},{"model":"nvidia/llama-3.1-nemotron-70b-instruct","score":{"totalPredicates":15,"uniquePredicates":14,"tierDistribution":{"1":11,"2":2,"6":1,"7":1},"avgConfidence":0.9533333333333335,"maxTier":7,"predicateList":["commemorates","hadMayorAndCouncil","hadMayorsFrom","hostedEvent","involvedLocation","locatedInRegion","presupposesHistoricalContext","providesEvidenceOf","publishedIn","publishedOn","servedAsMayorIn","servesAsTestamentTo","wasMunicipalityFor","writtenBy"],"factsPerKToken":4.365541327124563},"usage":{"promptTokens":2234,"completionTokens":1202,"totalTokens":3436},"durationMs":34578},{"model":"nvidia/nemotron-nano-9b-v2","score":{"totalPredicates":15,"uniquePredicates":13,"tierDistribution":{"1":15},"avgConfidence":0.9433333333333331,"maxTier":1,"predicateList":["commemorates","dated","directEvidenceOf","erectedMonument","hadMayor","hadMayors","hasHistoricalMonument","heldConferenceOn","locatedInMainStreet","madeHistory","servedAsMayor","wasConferenceLocation","wasMunicipality"],"factsPerKToken":3.1732599957689867},"usage":{"promptTokens":2312,"completionTokens":2415,"totalTokens":4727},"durationMs":20221},{"model":"google/gemini-2.5-flash-lite","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":2230,"completionTokens":32768,"totalTokens":34998},"durationMs":78338,"error":"JSON parse failed"},{"model":"nvidia/nemotron-3-super-120b-a12b","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"durationMs":180014,"error":"Error: Timeout after 180s"},{"model":"cohere/command-a","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":2251,"completionTokens":2315,"totalTokens":4566},"durationMs":48246,"error":"JSON parse failed"},{"model":"deepseek/deepseek-r1-0528","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"durationMs":180002,"error":"Error: Timeout after 180s"},{"model":"deepseek/deepseek-v4-pro","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"durationMs":180003,"error":"Error: Timeout after 180s"},{"model":"moonshotai/kimi-k2.6","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"durationMs":180002,"error":"Error: Timeout after 180s"}];
+
+function calcCost(model, usage) {
+  const p = PRICING[model];
+  if (!p) return 0;
+  return usage.promptTokens * p.in + usage.completionTokens * p.out;
+}
+
+function fmtCost(c) {
+  if (c === 0) return '-';
+  if (c < 0.001) return '$' + c.toFixed(5);
+  if (c < 0.01) return '$' + c.toFixed(4);
+  return '$' + c.toFixed(3);
+}
+
+function costClass(c) {
+  if (c === 0) return '';
+  if (c < 0.003) return 'cost-good';
+  if (c < 0.02) return 'cost-mid';
+  return 'cost-high';
+}
+
+const valid = DATA.filter(d => !d.error && d.score.totalPredicates > 0);
+const failed = DATA.filter(d => d.error || d.score.totalPredicates === 0);
+
+// Summary cards
+const best = valid.reduce((a,b) => a.score.totalPredicates > b.score.totalPredicates ? a : b);
+const cheapest = valid.reduce((a,b) => {
+  const ca = calcCost(a.model, a.usage), cb = calcCost(b.model, b.usage);
+  const pa = a.score.totalPredicates > 0 ? ca/a.score.totalPredicates : Infinity;
+  const pb = b.score.totalPredicates > 0 ? cb/b.score.totalPredicates : Infinity;
+  return pa < pb ? a : b;
+});
+const fastest = valid.reduce((a,b) => a.durationMs < b.durationMs ? a : b);
+const efficient = valid.reduce((a,b) => a.score.factsPerKToken > b.score.factsPerKToken ? a : b);
+
+const cards = [
+  { label: 'Most Facts', value: best.score.totalPredicates, detail: best.model.split('/')[1] },
+  { label: 'Best $/Fact', value: fmtCost(calcCost(cheapest.model, cheapest.usage) / cheapest.score.totalPredicates), detail: cheapest.model.split('/')[1] },
+  { label: 'Fastest', value: (fastest.durationMs/1000).toFixed(1)+'s', detail: fastest.model.split('/')[1] },
+  { label: 'Best F/kT', value: efficient.score.factsPerKToken.toFixed(1), detail: efficient.model.split('/')[1] },
+  { label: 'Best $/1k Facts', value: '$' + (calcCost(cheapest.model, cheapest.usage) / cheapest.score.totalPredicates * 1000).toFixed(2), detail: cheapest.model.split('/')[1] },
+  { label: 'Best Quality', value: (() => { let best='',bv=0; for(const[m,s] of Object.entries(QSCORES)){const a=s.reduce((x,y)=>x+y,0)/5;if(a>bv){bv=a;best=m;}} return bv.toFixed(1); })(), detail: (() => { let best='',bv=0; for(const[m,s] of Object.entries(QSCORES)){const a=s.reduce((x,y)=>x+y,0)/5;if(a>bv){bv=a;best=m;}} return best.split('/')[1]; })() },
+  { label: 'Models Tested', value: DATA.length, detail: valid.length + ' succeeded' },
+  { label: 'Total Predicates', value: valid.reduce((s,d) => s + d.score.totalPredicates, 0), detail: 'across all models' },
+];
+const cardsEl = document.getElementById('summary-cards');
+cards.forEach(c => {
+  cardsEl.innerHTML += `<div class="card"><div class="label">${c.label}</div><div class="value">${c.value}</div><div class="detail">${c.detail}</div></div>`;
+});
+
+// Legend
+const legendEl = document.getElementById('legend');
+for (let t = 1; t <= 8; t++) {
+  legendEl.innerHTML += `<div class="legend-item"><div class="legend-swatch" style="background:${TIER_COLORS[t]}"></div>T${t}: ${TIER_NAMES[t]}</div>`;
+}
+
+// Table
+const cols = [
+  { key: 'model', label: 'Model', cls: 'model-name', sort: 'str' },
+  { key: 'facts', label: 'Facts', cls: 'num', sort: 'num' },
+  { key: 'uniq', label: 'Unique', cls: 'num', sort: 'num' },
+  { key: 'tiers', label: 'Tiers', cls: 'num', sort: 'num' },
+  { key: 'tierbar', label: 'Tier Distribution', cls: 'bar-cell', sort: null },
+  { key: 't1', label: 'T1', cls: 'num', sort: 'num' },
+  { key: 't2', label: 'T2', cls: 'num', sort: 'num' },
+  { key: 't3', label: 'T3', cls: 'num', sort: 'num' },
+  { key: 't4', label: 'T4', cls: 'num', sort: 'num' },
+  { key: 't5', label: 'T5', cls: 'num', sort: 'num' },
+  { key: 't6', label: 'T6', cls: 'num', sort: 'num' },
+  { key: 't7', label: 'T7', cls: 'num', sort: 'num' },
+  { key: 't8', label: 'T8', cls: 'num', sort: 'num' },
+  { key: 'conf', label: 'Conf', cls: 'num', sort: 'num' },
+  { key: 'tokIn', label: 'Tok In', cls: 'num', sort: 'num' },
+  { key: 'tokOut', label: 'Tok Out', cls: 'num', sort: 'num' },
+  { key: 'cost', label: 'Cost', cls: 'num', sort: 'num' },
+  { key: 'costPerFact', label: '$/Fact', cls: 'num', sort: 'num' },
+  { key: 'cost1k', label: '$/1k Facts', cls: 'num', sort: 'num' },
+  { key: 'fkt', label: 'F/kT', cls: 'num', sort: 'num' },
+  { key: 'time', label: 'Time', cls: 'num', sort: 'num' },
+  { key: 'qOnto', label: 'Onto', cls: 'num', sort: 'num' },
+  { key: 'qHyg', label: 'Hyg', cls: 'num', sort: 'num' },
+  { key: 'qGround', label: 'Ground', cls: 'num', sort: 'num' },
+  { key: 'qTier', label: 'TierQ', cls: 'num', sort: 'num' },
+  { key: 'qGraph', label: 'Graph', cls: 'num', sort: 'num' },
+  { key: 'qAvg', label: 'Avg Q', cls: 'num', sort: 'num' },
+];
+
+function buildRows() {
+  return [...valid, ...failed].map(d => {
+    const td = d.score.tierDistribution || {};
+    const cost = calcCost(d.model, d.usage);
+    const cpf = d.score.totalPredicates > 0 ? cost / d.score.totalPredicates : 0;
+    const tiersHit = [1,2,3,4,5,6,7,8].filter(t => (td[t]||0) > 0).length;
+    return {
+      _raw: d,
+      _error: !!d.error || d.score.totalPredicates === 0,
+      model: d.model,
+      facts: d.score.totalPredicates,
+      uniq: d.score.uniquePredicates,
+      tiers: tiersHit,
+      tierbar: td,
+      t1: td[1]||0, t2: td[2]||0, t3: td[3]||0, t4: td[4]||0,
+      t5: td[5]||0, t6: td[6]||0, t7: td[7]||0, t8: td[8]||0,
+      conf: d.score.avgConfidence,
+      tokIn: d.usage.promptTokens,
+      tokOut: d.usage.completionTokens,
+      cost: cost,
+      costPerFact: cpf,
+      cost1k: cpf * 1000,
+      fkt: d.score.factsPerKToken,
+      time: d.durationMs / 1000,
+      qOnto: (QSCORES[d.model] || [])[0] || 0,
+      qHyg: (QSCORES[d.model] || [])[1] || 0,
+      qGround: (QSCORES[d.model] || [])[2] || 0,
+      qTier: (QSCORES[d.model] || [])[3] || 0,
+      qGraph: (QSCORES[d.model] || [])[4] || 0,
+      qAvg: QSCORES[d.model] ? (QSCORES[d.model].reduce((a,b)=>a+b,0) / 5) : 0,
+    };
+  });
+}
+
+let rows = buildRows();
+let sortCol = 'facts';
+let sortDir = 'desc';
+
+function tierBarHTML(td, total) {
+  if (total === 0) return '<div class="tier-bar"></div>';
+  let html = '<div class="tier-bar">';
+  for (let t = 1; t <= 8; t++) {
+    const n = td[t] || 0;
+    if (n === 0) continue;
+    const pct = (n / total * 100).toFixed(1);
+    html += `<div class="seg seg-t${t}" style="width:${pct}%" data-label="T${t}: ${n} (${Math.round(pct)}%)"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderTable() {
+  const hdr = document.getElementById('table-header');
+  hdr.innerHTML = '';
+  cols.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c.label;
+    th.className = c.cls || '';
+    if (c.key === sortCol) th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    if (c.sort) {
+      th.onclick = () => {
+        if (sortCol === c.key) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+        else { sortCol = c.key; sortDir = 'desc'; }
+        renderTable();
+      };
+    }
+    hdr.appendChild(th);
+  });
+
+  const sorted = [...rows].sort((a,b) => {
+    if (a._error && !b._error) return 1;
+    if (!a._error && b._error) return -1;
+    const col = cols.find(c => c.key === sortCol);
+    if (!col || !col.sort) return 0;
+    let va = a[sortCol], vb = b[sortCol];
+    if (col.sort === 'str') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  sorted.forEach(r => {
+    const tr = document.createElement('tr');
+    if (r._error) tr.className = 'error';
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      td.className = c.cls || '';
+      if (c.key === 'model') {
+        td.textContent = r.model;
+      } else if (c.key === 'tierbar') {
+        td.innerHTML = tierBarHTML(r.tierbar, r.facts);
+      } else if (c.key === 'tiers') {
+        td.textContent = r.tiers + '/8';
+      } else if (c.key === 'conf') {
+        td.textContent = r.conf > 0 ? r.conf.toFixed(2) : '-';
+      } else if (c.key === 'cost') {
+        td.textContent = fmtCost(r.cost);
+        td.className += ' ' + costClass(r.cost);
+      } else if (c.key === 'costPerFact') {
+        td.textContent = r.facts > 0 ? fmtCost(r.costPerFact) : '-';
+        td.className += ' ' + costClass(r.costPerFact * 100);
+      } else if (c.key === 'cost1k') {
+        if (r.facts > 0 && r.cost1k > 0) {
+          td.textContent = '$' + r.cost1k.toFixed(2);
+          td.className += ' ' + (r.cost1k < 0.5 ? 'cost-good' : r.cost1k < 2 ? 'cost-mid' : 'cost-high');
+        } else { td.textContent = '-'; }
+      } else if (c.key === 'fkt') {
+        td.textContent = r.fkt > 0 ? r.fkt.toFixed(1) : '-';
+      } else if (c.key === 'time') {
+        td.textContent = r.time.toFixed(1) + 's';
+      } else if (c.key.startsWith('q')) {
+        const v = r[c.key];
+        if (v > 0) {
+          td.textContent = c.key === 'qAvg' ? v.toFixed(1) : v;
+          td.style.color = v >= 8 ? 'var(--green)' : v >= 6 ? 'var(--orange)' : 'var(--red)';
+          if (v >= 9) td.style.fontWeight = '700';
+        } else { td.textContent = '-'; }
+      } else if (c.key === 'tokIn' || c.key === 'tokOut') {
+        td.textContent = r[c.key] > 0 ? r[c.key].toLocaleString() : '-';
+      } else {
+        td.textContent = r[c.key] || (r._error ? '-' : '0');
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+renderTable();
+
+// Predicates accordion
+const predsEl = document.getElementById('preds-list');
+[...valid].sort((a,b) => b.score.totalPredicates - a.score.totalPredicates).forEach(d => {
+  const div = document.createElement('div');
+  div.className = 'pred-model';
+  const preds = d.score.predicateList || [];
+  div.innerHTML = `
+    <div class="pred-header" onclick="this.nextElementSibling.classList.toggle('open')">
+      <span>${d.model} <span style="color:var(--text-muted);font-weight:400">(${preds.length} unique)</span></span>
+      <span style="color:var(--text-muted)">▾</span>
+    </div>
+    <div class="pred-body">
+      <div class="pred-tags">${preds.map(p => `<span class="pred-tag">${p}</span>`).join('')}</div>
+    </div>
+  `;
+  predsEl.appendChild(div);
+});
+</script>
+</body>
+</html>

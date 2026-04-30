@@ -1,0 +1,266 @@
+{
+  "qualifiers": [
+    "ontologicalPrecision",
+    "tripleHygiene",
+    "groundingFidelity",
+    "tierAuthenticity",
+    "graphConnectivity"
+  ],
+  "qualifierLabels": {
+    "ontologicalPrecision": "Onto",
+    "tripleHygiene": "Hyg",
+    "groundingFidelity": "Ground",
+    "tierAuthenticity": "TierQ",
+    "graphConnectivity": "Graph"
+  },
+  "scores": {
+    "anthropic/claude-opus-4.5": {
+      "ontologicalPrecision": 9,
+      "tripleHygiene": 8,
+      "groundingFidelity": 9,
+      "tierAuthenticity": 9,
+      "graphConnectivity": 9,
+      "notes": "Best overall. Models visiting mayors as distinct entities, separates conference from association, reifies heroism properly. 36 subjects — richest entity graph. 3 boolean objects is minor. Confidence well-calibrated (1.0 for explicit, 0.85-0.9 for inferred). Tier spread is genuinely earned — T5 rhetorical moves like 'employsRhetoricalHook' are real observations, T7 'essentializes' is legitimate. 92 IRI objects create dense graph."
+    },
+    "anthropic/claude-haiku-4.5": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 4,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 8,
+      "graphConnectivity": 4,
+      "notes": "Highest predicate creativity (116 unique) but terrible triple hygiene. 42 string blobs like 'continuity of Cooktown's governance' as objects — these are sentences, not structured data. Zero boolean objects but only 28 IRIs out of 152 facts (18%). Most facts are dead-end string literals. Tier labels are genuine though — it actually identifies real presuppositions, real rhetorical moves. Only 12 subjects despite 152 facts means very flat graph."
+    },
+    "anthropic/claude-sonnet-4.6": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 7,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 8,
+      "graphConnectivity": 8,
+      "notes": "Strong ontological modelling — 21 subjects, distinguishes monument sides, models child relationship. 20 string blobs is concerning but 75 IRIs is good. Interesting observations like 'writtenDayBefore' (dateline Oct 5, published Oct 6). Some T5 facts genuinely insightful: 'usesMonumentAsRhetoricalAnchor'. Confidence at 1.0 for explicit facts, lower for inferences — well calibrated. 3 boolean objects."
+    },
+    "x-ai/grok-4": {
+      "ontologicalPrecision": 10,
+      "tripleHygiene": 9,
+      "groundingFidelity": 9,
+      "tierAuthenticity": 10,
+      "graphConnectivity": 9,
+      "notes": "Best ontological modelling in the benchmark. 26 subjects, 118 unique predicates from 128 facts (92% unique). Zero booleans, only 1 string blob. Every tier earned: T3 'contrastsPresentWithPast' is real, T6 'conspicuouslyAbsent' noting omission of 1954 mayor names is brilliant, T7 'counterfactuallyAssumes' shows genuine philosophical depth. 76 IRIs. 114 facts at confidence 1.0 shows it reserves uncertainty correctly. Most even tier spread of any model."
+    },
+    "x-ai/grok-4.1-fast": {
+      "ontologicalPrecision": 9,
+      "tripleHygiene": 9,
+      "groundingFidelity": 9,
+      "tierAuthenticity": 8,
+      "graphConnectivity": 9,
+      "notes": "Excellent. 22 subjects, zero booleans, 49 IRIs from 76 facts. Separates inscription from person, models evidence as its own entity. Confidence well-calibrated: 48 at 1.0 for explicit facts. 'notablyOmits' observation about 1954 mayor names is genuinely insightful. 68 unique predicates from 76 facts (89% unique). Only 2 string blobs. Slightly weaker tier spread than Grok-4 but quality per fact is very high."
+    },
+    "openai/gpt-5.4-mini": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 9,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 9,
+      "notes": "Remarkably clean output. 59 IRI objects from 65 facts (91%), zero booleans, zero string blobs. Best IRI ratio in the benchmark. Good subject modelling with 15 entities. Confidence granular (0.68-0.99 range) but never 1.0 — slightly underconfident on explicit facts. T5+ facts are reasonable but less creative than Grok/Opus. 'suggestsWithoutStating' is genuinely T6. Extremely token-efficient (11.3 F/kT)."
+    },
+    "openai/gpt-4.1": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 6,
+      "notes": "Reasonable T1 extraction but 10 string blobs and 6 boolean objects hurt. 84 of 88 facts at confidence 1.0 — poorly calibrated, even inferences get max confidence. 15 subjects is adequate. Skips T4 entirely. Some good T6 insights like 'presupposesThat' but also filler like 'framesAs: municipal governance as notable'. 41 IRIs vs 47 literals — too string-heavy for good graph connectivity."
+    },
+    "openai/gpt-4.1-mini": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 7,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 2,
+      "graphConnectivity": 6,
+      "notes": "Clean T1 extraction — zero booleans, only 1 blob, 13 IRIs from 24 facts. 10 subjects is reasonable for the count. But scores 2 on tier authenticity because it never attempts anything beyond T1 despite prompt demanding all 8. No presuppositions, no rhetorical analysis, no philosophical extraction at all. Well-grounded for what it does but dramatically incomplete."
+    },
+    "openai/o4-mini": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 7,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 5,
+      "graphConnectivity": 7,
+      "notes": "19 subjects shows good entity diversity. 44 IRIs from 69 facts is decent. Only 2 booleans. But 44 of 69 facts are T1 (64%) — very top-heavy despite being a reasoning model. T4/T6/T7 have only 1-3 facts each, feels like box-checking. 48 facts at confidence 1.0 including some inferences — slightly overconfident. Good but unremarkable for a model of this class."
+    },
+    "google/gemini-2.5-pro": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 5,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 9,
+      "graphConnectivity": 6,
+      "notes": "Excellent tier authenticity — 8/8 tiers with even spread and genuine depth. 'axiologically' as a predicate shows real philosophical engagement. 80 unique predicates from 93 facts. But 18 string blobs and 53 total literals vs only 40 IRIs hurts graph connectivity. 76 at confidence 1.0 is overconfident for inferences. 21 subjects is good. Interesting: attributes rhetorical moves to 'special-representative' not 'article' — more precise attribution."
+    },
+    "google/gemini-2.5-flash": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 6,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 6,
+      "graphConnectivity": 6,
+      "notes": "19 subjects, 50 unique predicates. 3 booleans and 7 string blobs. 59 at confidence 1.0 is overconfident. T1-heavy at 63% — higher tiers feel thin. Some odd predicates like 'had' (too generic). 36 IRIs vs 35 literals is balanced but could be more connected. Adequate but unremarkable."
+    },
+    "google/gemma-3-27b-it": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 7,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 5,
+      "graphConnectivity": 6,
+      "notes": "12 subjects from 28 facts — decent diversity. Zero booleans, zero blobs. 16 IRIs from 28. Confidence properly graduated (0.5-0.9 range). But only reaches T7 max and T6/T7 facts feel generic ('implicitlyAssumes: heroism is worthy of commemoration'). Jumps from T3 to T6 — gaps in middle tiers."
+    },
+    "deepseek/deepseek-v4-flash": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 6,
+      "notes": "Some creative predicates: 'presupposesThatFridayExisted' is hilariously literal but technically correct, 'usesContrastiveMarker: but' identifies the actual rhetorical device. 7 boolean objects and 0 string blobs. 61 at confidence 1.0 — overconfident. 16 subjects. 55 unique predicates. Interesting but rough around edges."
+    },
+    "deepseek/deepseek-chat-v3-0324": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 4,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 5,
+      "graphConnectivity": 4,
+      "notes": "Only 8 subjects from 29 facts — very flat graph. 10 boolean objects from 29 facts (34%) is the worst ratio in the benchmark. Only 9 IRIs. Max tier 7 but only reaches it with 2 generic facts. 24 at confidence 1.0 including booleans — overconfident. Well-grounded for T1 but poor structure."
+    },
+    "mistralai/mistral-large-2512": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 9,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 8,
+      "notes": "Excellent hygiene — zero booleans, only 2 blobs, 64 IRIs from 78 facts (82%). 17 subjects with good entity modelling. 57 unique predicates. Even tier distribution with 5 facts in each of T3-T8. Confidence well-calibrated (67 at 1.0 for explicit facts). Slightly formulaic tier spread (exactly 5 per tier feels mechanical) but each fact is well-formed."
+    },
+    "mistralai/mistral-medium-3": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 7,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 6,
+      "graphConnectivity": 7,
+      "notes": "Only 5 subjects from 49 facts — extremely concentrated graph. Zero booleans, 1 blob. 31 IRIs is decent. No T3 or T4 — jumps from T2 to T5. 35 at confidence 1.0. Predicates are fine but generic ('mentionsEvent', 'mentionsPerson'). T2 is inflated at 17 facts with relational padding."
+    },
+    "mistralai/mistral-small-3.2-24b-instruct": {
+      "ontologicalPrecision": 4,
+      "tripleHygiene": 5,
+      "groundingFidelity": 5,
+      "tierAuthenticity": 2,
+      "graphConnectivity": 5,
+      "notes": "80 facts but only 27 unique predicates (34% unique) — massive predicate reuse. 62 of 80 facts are T2 which is clearly wrong — generic relational predicates like 'hasHistoricalSignificance' aren't T2. Only 5 subjects. Zero booleans but many vague predicates. Quantity without quality."
+    },
+    "qwen/qwen3-coder-plus": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 4,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 8,
+      "graphConnectivity": 6,
+      "notes": "34 boolean objects from 107 facts (32%) — worst boolean count in benchmark. But tier spread is genuinely even (7-9 per tier at T3-T8) and the higher-tier observations are real. 91 unique predicates shows creativity. 60 IRIs helps graph but diluted by booleans. 20 subjects is good. 'impliesCommunityPride' and 'viewsMayorsAsWorthyOfRecord' show real insight buried under structural problems."
+    },
+    "qwen/qwen3-coder": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 3,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 5,
+      "notes": "20 boolean objects and 19 string blobs — double structural problem. 87 unique predicates shows creativity but many are verbose ('transitionedFromMunicipalToRegionalGovernance'). 15 subjects. Only 37 IRIs from 112 facts (33%). Tier labels are mostly earned — genuine presuppositions and rhetorical observations. But the volume comes at the cost of hygiene."
+    },
+    "qwen/qwen3-235b-a22b": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 8,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 8,
+      "notes": "Clean output for its size. Zero booleans, zero blobs. 25 IRIs from 30 facts (83%). 8 subjects with proper entity modelling. Confidence graduated well (0.8-0.98). Even tier spread. Conservative but accurate — better to have 30 clean facts than 112 messy ones."
+    },
+    "qwen/qwen3-32b": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 8,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 3,
+      "graphConnectivity": 7,
+      "notes": "Zero booleans, zero blobs, 24 IRIs from 30 facts. Clean structure. But tier distribution is absurd: 23 T1, then exactly 1 fact per tier T2-T8. That's clearly box-checking, not genuine analysis. The single T7 fact exists to fill a quota, not because of deep insight. 23 at confidence 1.0 — fine for T1 facts."
+    },
+    "qwen/qwen3-30b-a3b": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 7,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 3,
+      "graphConnectivity": 6,
+      "notes": "Zero booleans, zero blobs. 15 IRIs from 25 facts. But same box-checking pattern as qwen3-32b: 18 T1, then exactly 1 per tier from T4-T8. 24 at confidence 1.0 — overconfident for some inferences. Only 5 subjects. Conservative and clean but shallow."
+    },
+    "qwen/qwen3-14b": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 7,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 6,
+      "graphConnectivity": 7,
+      "notes": "Zero booleans, zero blobs. 14 IRIs from 21 facts (67%). 6 subjects. More organic tier spread than 32b/30b siblings — not exact 1-per-tier. Some interesting predicates ('wasContextualizedIn'). But very small output for 162 seconds of inference time."
+    },
+    "qwen/qwen3-8b": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 6,
+      "groundingFidelity": 6,
+      "tierAuthenticity": 5,
+      "graphConnectivity": 7,
+      "notes": "Zero booleans. 17 IRIs from 19 facts (89% IRI) — best IRI ratio. But some triples are malformed: (ex:cooktown, wasMunicipality, ex:cooktown) and (ex:cooktown, hadMayor, ex:cooktown) — self-referential nonsense. Only 6 subjects, 14 unique predicates. Reaches T8 but with only 1 fact per high tier."
+    },
+    "meta-llama/llama-4-maverick": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 7,
+      "groundingFidelity": 6,
+      "tierAuthenticity": 3,
+      "graphConnectivity": 6,
+      "notes": "Zero booleans, zero blobs. 13 IRIs from 20 facts. 8 subjects is decent for the count. But claims T8 with 'drawsHistoricalParallel: true' — that's a boolean T2 fact wearing a T8 label. Only 3 tiers genuinely populated (T1, T2, T8). Confidence at 0.7-0.9 range — reasonably calibrated."
+    },
+    "meta-llama/llama-4-scout": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 4,
+      "graphConnectivity": 5,
+      "notes": "2 boolean objects. Mixed IRI casing (ex:aldermanEdwardDarcy — camelCase instead of kebab). Only 4 subjects. 1 string blob. Max tier 3 — never attempts depth. 16 unique predicates from 19 facts is decent. Grounding is solid but very surface-level."
+    },
+    "microsoft/phi-4": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 5,
+      "graphConnectivity": 3,
+      "notes": "Zero IRI objects — every single object is a literal. Completely unconnected graph. 9 subjects but no entity references between them. 2 string blobs. Zero booleans. Reaches T7 with 1 fact. 14 at confidence 1.0. Well-grounded T1 facts but impossible to traverse the resulting graph."
+    },
+    "nvidia/nemotron-3-nano-30b-a3b": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 5,
+      "groundingFidelity": 5,
+      "tierAuthenticity": 5,
+      "graphConnectivity": 7,
+      "notes": "11 subjects, zero booleans, zero blobs, 30 IRIs from 38 facts (79%) — good graph density. But multiple 'undefined' objects (hadMayorsCount, heldOn, datesBackTo, inscriptionDate, publishedOn, pageNumber) — failed to extract the actual values. Uses underscore IRIs (ex:main_street) instead of kebab. Tier labels are questionable: article metadata like publishedIn/hasByline classified as T8 'Intertextual' when they're clearly T1. Mrs Watson facts at T3 'Opinions' is a stretch. The 'undefined' values tank grounding fidelity."
+    },
+    "nvidia/nemotron-nano-9b-v2": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 6,
+      "groundingFidelity": 5,
+      "tierAuthenticity": 2,
+      "graphConnectivity": 7,
+      "notes": "Zero booleans, zero blobs, all 15 objects are IRIs (100%) — best IRI ratio possible. 6 subjects. But uses CamelCase IRIs (ex:Cooktown, ex:EdwardD'Arcy) violating kebab convention. Some factual errors: (Cooktown, wasMunicipality, ex:1904) — 1904 is not stated anywhere in the text. Tier authenticity scores 2 because all 15 facts are T1 despite prompt demanding all 8 tiers. Clean but shallow with a hallucinated date."
+    },
+    "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 8,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 8,
+      "notes": "Surprisingly strong. 11 subjects, zero booleans, zero blobs, 35 IRIs from 52 facts (67%). Proper kebab-case IRIs. Separates inscriptions from people (ex:edward-darcy-inscription). Models monument as constituted by obelisk — nice mereological distinction. Tier spread is organic and mostly earned: T5 'usesAnalogy: monument-as-evidence' is genuine, T6 'omitsDetail: specific achievements of mayors' is a real observation. One hallucination: (monument, madeOf, ex:stone) — text never says stone. Confidence well-graduated. Best Nemotron by far."
+    },
+    "nvidia/llama-3.1-nemotron-70b-instruct": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 4,
+      "graphConnectivity": 5,
+      "notes": "Only 15 facts, 6 subjects. 1 boolean (hadMayorAndCouncil: true), 1 blob. 8 IRIs from 15. All T1 confidence at 1.0 — fine for explicit facts. But only 4 tiers populated, T6 is just 'presupposesHistoricalContext: true' (boolean + vague), T7 'servesAsTestamentTo' is fair. Groups Townsville+Bowen as single entity 'ex:townsville-and-bowen' — loses the dual-mayor structure. Adequate but shallow."
+    }
+  }
+}

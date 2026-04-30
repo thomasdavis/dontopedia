@@ -1,0 +1,59 @@
+[
+  {
+    "model": "nvidia/nemotron-nano-12b-v2-vl",
+    "score": {
+      "totalPredicates": 0,
+      "uniquePredicates": 0,
+      "tierDistribution": {},
+      "avgConfidence": 0,
+      "maxTier": 0,
+      "predicateList": [],
+      "factsPerKToken": 0
+    },
+    "usage": {
+      "promptTokens": 2312,
+      "completionTokens": 16384,
+      "totalTokens": 18696
+    },
+    "durationMs": 131858,
+    "error": "JSON parse failed"
+  },
+  {
+    "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "score": {
+      "totalPredicates": 0,
+      "uniquePredicates": 0,
+      "tierDistribution": {},
+      "avgConfidence": 0,
+      "maxTier": 0,
+      "predicateList": [],
+      "factsPerKToken": 0
+    },
+    "usage": {
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "totalTokens": 0
+    },
+    "durationMs": 180017,
+    "error": "Error: Timeout after 180s"
+  },
+  {
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "score": {
+      "totalPredicates": 0,
+      "uniquePredicates": 0,
+      "tierDistribution": {},
+      "avgConfidence": 0,
+      "maxTier": 0,
+      "predicateList": [],
+      "factsPerKToken": 0
+    },
+    "usage": {
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "totalTokens": 0
+    },
+    "durationMs": 121266,
+    "error": "TypeError: undefined is not an object (evaluating 'completion.choices[0]')"
+  }
+]

@@ -1,0 +1,140 @@
+{
+  "scores": {
+    "anthropic/claude-sonnet-4.6": {
+      "ontologicalPrecision": 9,
+      "tripleHygiene": 10,
+      "groundingFidelity": 9,
+      "tierAuthenticity": 9,
+      "graphConnectivity": 10,
+      "notes": "Best output in benchmark. 55 subjects, 231 unique predicates, ZERO booleans, ZERO blobs, 285 IRIs from 298 facts (96%). v2 prompt completely eliminated Sonnet's previous hygiene issues. Rich entity modelling: separates address from person, mission from founding event, corroboree from welcome ceremony. Tier spread genuine — T5 'warns about potential disturbance of burial sites' is a real speech act, T7 'treatsAsProcess' for displacement is legitimate ontological analysis. Confidence well-calibrated: 1.0 for explicit, 0.7-0.9 for inferred."
+    },
+    "anthropic/claude-opus-4.5": {
+      "ontologicalPrecision": 9,
+      "tripleHygiene": 9,
+      "groundingFidelity": 9,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 9,
+      "notes": "66 subjects — richest entity graph. Zero booleans, only 1 blob. 240 IRIs from 293 facts (82%). But 75% of facts are T1 — top-heavy despite having 8/8 tiers. Many T1 facts could be T2 (relational). The depth is there but the distribution is skewed. 226 facts at confidence 1.0 — overconfident on some inferences. Excellent predicate creativity: 'asChildWasNotAllowedToWalkOn', 'transmitsIntergenerationalKnowledge'. Properly separates family members into distinct entities."
+    },
+    "mistralai/mistral-medium-3": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 8,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 9,
+      "graphConnectivity": 9,
+      "notes": "Best tier distribution in the benchmark — 37% T1, 32% T2, then 5-8% across T3-T8. Genuinely earns its higher tiers: T5 'softensPosition' on burial speculation, T7 'counterfactuallyAssumes' on land deal permanence. Zero booleans, only 5 blobs. 223 IRIs from 257 (87%). 36 subjects. Some T2 inflation (81 facts) but mostly legitimate relational triples. Best efficiency at 10.6 F/kT. 205 unique predicates."
+    },
+    "mistralai/mistral-large-2512": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 9,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 8,
+      "graphConnectivity": 9,
+      "notes": "51 subjects — excellent entity diversity. Zero booleans, zero blobs. 152 IRIs from 169 facts (90%). Clean IRI formatting throughout. T5 observations like 'warnsAbout historical injustices' and 'appealsToEmotion' are legitimate rhetorical analysis. Good tier spread. Slightly formulaic in higher tiers. 123 unique predicates. Confidence well-calibrated."
+    },
+    "openai/gpt-5.4-mini": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 9,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 6,
+      "graphConnectivity": 8,
+      "notes": "50 subjects, zero booleans, 1 blob, 134 IRIs from 165 facts (81%). Best token efficiency at 14.1 F/kT. But 141 of 165 facts are T1 (85%) — massive T1 overweight despite having 7 tiers. Zero T8 facts. The depth attempted in T5-T7 is real but sparse. Some interesting observations: 'presupposesKinshipWith' for grandfather's relationship to Aboriginal community. Has 'authorOf' backwards — says document authored Lena Stevens."
+    },
+    "google/gemini-2.5-flash": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 7,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 8,
+      "notes": "48 subjects, 134 IRIs from 148 (91%). But 6 boolean objects — v2 prompt didn't fully fix this for Gemini. 134 facts at confidence 1.0 — overconfident. T1-heavy at 74%. Some good T6 presuppositions about reader understanding of mission history. 112 unique predicates. Clean but not as deep as the Anthropic/Mistral models."
+    },
+    "openai/o4-mini": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 9,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 5,
+      "graphConnectivity": 9,
+      "notes": "34 subjects, zero booleans, zero blobs, 127 IRIs from 130 facts (98%) — best IRI ratio of any high-volume model. But only 5/8 tiers — zero T6, T7, T8. A reasoning model that ignores presuppositions and philosophical depth entirely. 108 unique predicates. Some confidence miscalibration: 'addressesAudience: government authorities' at 0.7 — text doesn't address government."
+    },
+    "google/gemini-2.5-pro": {
+      "ontologicalPrecision": 8,
+      "tripleHygiene": 9,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 8,
+      "graphConnectivity": 9,
+      "notes": "48 subjects, zero booleans, 1 blob, 114 IRIs from 129 (88%). Strong T7 showing — 11 facts including genuine teleological analysis ('forPurposeOf: learning things', 'treatedAsProperty'). Has 'authorOf' backwards like GPT-5.4-mini. Even tier distribution. 106 unique predicates. 112 at confidence 1.0 — overconfident on some inferences."
+    },
+    "x-ai/grok-4.1-fast": {
+      "ontologicalPrecision": 9,
+      "tripleHygiene": 9,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 8,
+      "graphConnectivity": 9,
+      "notes": "49 subjects from 122 facts — best subject-to-fact ratio. 114 unique predicates from 122 facts (93% unique) — highest predicate novelty. Zero booleans, 1 blob, 112 IRIs (92%). Rich entity graph: separates wharf, north shore, coloured sands as distinct locations. Typo in IRI: 'ex:lens-stevens' instead of 'ex:lena-stevens'. T6 'presupposesThat: mother had tribe to meet' is genuine. $0.006 total — absurd value."
+    },
+    "qwen/qwen3-coder": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 4,
+      "graphConnectivity": 7,
+      "notes": "21 boolean objects from 104 facts (20%) — v2 prompt failed to fix this for Qwen Coder. Only 3/8 tiers (T1-T3), no deeper extraction at all. 82 IRIs from 104 (79%). 27 subjects. Some interesting T3 evaluative predicates but they're things like 'wasResilient', 'wasMarginalizedBy' which are string-ish adjective predicates rather than relational. Verbose IRIs like 'ex:father-of-grandfather-of-lena-stevens'."
+    },
+    "qwen/qwen3-8b": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 8,
+      "groundingFidelity": 6,
+      "tierAuthenticity": 2,
+      "graphConnectivity": 8,
+      "notes": "Zero booleans, zero blobs, 107 IRIs from 113 (95%). v2 prompt fixed hygiene completely. But ALL 113 facts are T1 — zero depth despite prompt demanding 8 tiers. Only 17 subjects and 66 unique predicates — lots of predicate reuse. Uses bare 'ex:grandfather', 'ex:father' without qualifying who — ambiguous in a family history. 113 at confidence 1.0 — every fact max confidence. Clean but shallow."
+    },
+    "qwen/qwen3-235b-a22b": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 9,
+      "groundingFidelity": 8,
+      "tierAuthenticity": 7,
+      "graphConnectivity": 9,
+      "notes": "Zero booleans, zero blobs, 37 IRIs from 38 facts (97%). 15 subjects. 8/8 tiers in only 38 facts — each tier represented but thin. Some good depth: 'treatsAsCulturalPractice' for corroboree, 'referencesMovement: aboriginal rights'. Clean and well-calibrated but too few facts for a 745-word article."
+    },
+    "deepseek/deepseek-chat-v3-0324": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 3,
+      "graphConnectivity": 5,
+      "notes": "5 boolean objects, 4 blobs. Only 36 IRIs from 61 (59%). 24 subjects is decent but 60 unique predicates from 61 facts means near-zero predicate reuse — each fact is a one-off. Only 2/8 tiers (T1-T2). 'wasBusinessman: true' shows v2 prompt didn't fix boolean habits. 'describedAs' with long string blob for the great-grandfather. Adequate surface extraction but no depth."
+    },
+    "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
+      "ontologicalPrecision": 7,
+      "tripleHygiene": 8,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 6,
+      "graphConnectivity": 8,
+      "notes": "18 subjects, zero booleans, 1 blob, 29 IRIs from 32 facts (91%). Uses bare 'ex:grandfather' without qualification — ambiguous. 6/8 tiers with some genuine depth: T5 'usesRhetoricalDescription: still kicking up dust' is an actual quote identification. T7 'counterfactuallyAssumes: land ownership protection' is a stretch but defensible. Only 32 facts from 745 words feels thin. Confidence well-graduated."
+    },
+    "openai/gpt-4.1-mini": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 2,
+      "graphConnectivity": 5,
+      "notes": "Only 1/8 tiers — all T1 again, same as cooktown benchmark. v2 prompt didn't help this model add depth. 6 string blobs ('swamp, mangroves and scrub' as literal). 39 IRIs from 66 (59%). 21 subjects is ok. 64 at confidence 1.0. Uses flat string for address instead of IRI. Well-grounded T1 facts but zero analytical depth."
+    },
+    "meta-llama/llama-4-maverick": {
+      "ontologicalPrecision": 6,
+      "tripleHygiene": 6,
+      "groundingFidelity": 6,
+      "tierAuthenticity": 3,
+      "graphConnectivity": 7,
+      "notes": "13 subjects, zero blobs, 20 IRIs from 23 (87%). But has 'isBusinessman: true' — boolean despite v2 prompt ban. Only 3 tiers populated (T1, T7 with 1 fact). The T7 fact 'reifiesAs: founder' is reasonable but lonely. 19 at confidence 1.0 — overconfident. Very thin extraction for 745 words."
+    },
+    "meta-llama/llama-4-scout": {
+      "ontologicalPrecision": 5,
+      "tripleHygiene": 5,
+      "groundingFidelity": 7,
+      "tierAuthenticity": 3,
+      "graphConnectivity": 6,
+      "notes": "11 subjects, zero booleans, 3 blobs, 22 IRIs from 27 (81%). Uses 'describedFatherAs' with a 60+ char string blob — exactly what v2 prompt banned. Only 2/8 tiers (T1, T3). Uses 'ex:grand-father' and 'ex:step-father' with hyphens in odd places. 23 at confidence 1.0. Ground-level extraction only, no depth."
+    }
+  }
+}

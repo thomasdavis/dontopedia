@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predicate Extraction Benchmark</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --tier1: #58a6ff;
+    --tier2: #3fb950;
+    --tier3: #d29922;
+    --tier4: #f0883e;
+    --tier5: #f85149;
+    --tier6: #bc8cff;
+    --tier7: #ff7b72;
+    --tier8: #d2a8ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+  .card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  .card .detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+  th {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 1;
+  }
+  th:hover { color: var(--accent); }
+  th.sorted-asc::after { content: ' ▲'; color: var(--accent); }
+  th.sorted-desc::after { content: ' ▼'; color: var(--accent); }
+  td {
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:hover td { background: rgba(88, 166, 255, 0.04); }
+  tr.error td { opacity: 0.4; }
+  .model-name {
+    font-weight: 600;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar-cell { min-width: 200px; }
+
+  .tier-bar {
+    display: flex;
+    height: 20px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--border);
+    min-width: 160px;
+  }
+  .tier-bar .seg {
+    height: 100%;
+    position: relative;
+    transition: width 0.3s;
+  }
+  .tier-bar .seg:hover { filter: brightness(1.3); }
+  .tier-bar .seg:hover::after {
+    content: attr(data-label);
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .seg-t1 { background: var(--tier1); }
+  .seg-t2 { background: var(--tier2); }
+  .seg-t3 { background: var(--tier3); }
+  .seg-t4 { background: var(--tier4); }
+  .seg-t5 { background: var(--tier5); }
+  .seg-t6 { background: var(--tier6); }
+  .seg-t7 { background: var(--tier7); }
+  .seg-t8 { background: var(--tier8); }
+
+  .legend { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+
+  .cost-good { color: var(--green); }
+  .cost-mid { color: var(--orange); }
+  .cost-high { color: var(--red); }
+
+  .preds-section { margin-top: 32px; }
+  .preds-section h2 { font-size: 18px; margin-bottom: 16px; }
+  .pred-model {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .pred-header {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+  }
+  .pred-header:hover { background: rgba(88, 166, 255, 0.04); }
+  .pred-body { padding: 0 16px 12px; display: none; }
+  .pred-body.open { display: block; }
+  .pred-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pred-tag {
+    background: var(--border);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+
+  .tier-labels { font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<h1>Predicate Extraction Benchmark</h1>
+<div class="subtitle">Source: Mossman Gorge Mission (Document D1052) — 745 words | v2 prompt &nbsp;|&nbsp; 8-tier extraction prompt</div>
+
+<div class="cards" id="summary-cards"></div>
+
+<div class="legend" id="legend"></div>
+
+<table id="main-table">
+  <thead><tr id="table-header"></tr></thead>
+  <tbody id="table-body"></tbody>
+</table>
+
+<div class="preds-section">
+  <h2>Predicates Minted</h2>
+  <div id="preds-list"></div>
+</div>
+
+<script>
+const PRICING = {"deepseek/deepseek-v4-flash":{"in":1.4e-7,"out":2.8e-7},"openai/gpt-5.4-mini":{"in":7.5e-7,"out":0.0000045},"anthropic/claude-sonnet-4.6":{"in":0.000003,"out":0.000015},"nvidia/nemotron-3-nano-30b-a3b":{"in":5e-8,"out":2e-7},"mistralai/mistral-large-2512":{"in":5e-7,"out":0.0000015},"anthropic/claude-opus-4.5":{"in":0.000005,"out":0.000025},"x-ai/grok-4.1-fast":{"in":2e-7,"out":5e-7},"anthropic/claude-haiku-4.5":{"in":0.000001,"out":0.000005},"nvidia/llama-3.3-nemotron-super-49b-v1.5":{"in":1e-7,"out":4e-7},"qwen/qwen3-coder-plus":{"in":6.5e-7,"out":0.00000325},"qwen/qwen3-coder":{"in":2.2e-7,"out":0.0000018},"x-ai/grok-4":{"in":0.000003,"out":0.000015},"google/gemini-2.5-flash":{"in":3e-7,"out":0.0000025},"google/gemini-2.5-pro":{"in":0.00000125,"out":0.00001},"mistralai/mistral-medium-3":{"in":4e-7,"out":0.000002},"qwen/qwen3-8b":{"in":5e-8,"out":4e-7},"qwen/qwen3-235b-a22b":{"in":4.55e-7,"out":0.00000182},"openai/o4-mini":{"in":0.0000011,"out":0.0000044},"openai/gpt-4.1":{"in":0.000002,"out":0.000008},"openai/gpt-4.1-mini":{"in":4e-7,"out":0.0000016},"meta-llama/llama-4-maverick":{"in":1.5e-7,"out":6e-7},"meta-llama/llama-4-scout":{"in":8e-8,"out":3e-7},"deepseek/deepseek-chat-v3-0324":{"in":2e-7,"out":7.7e-7}};
+
+const TIER_COLORS = ['','#58a6ff','#3fb950','#d29922','#f0883e','#f85149','#bc8cff','#ff7b72','#d2a8ff'];
+const TIER_NAMES = ['','Surface Facts','Relational','Opinions','Epistemic','Pragmatic','Presuppositions','Philosophical','Intertextual'];
+// Quality scores: [ontoPrecision, tripleHygiene, groundingFidelity, tierAuthenticity, graphConnectivity]
+const QSCORES = {"anthropic/claude-sonnet-4.6":[9,10,9,9,10],"anthropic/claude-opus-4.5":[9,9,9,7,9],"mistralai/mistral-medium-3":[8,8,8,9,9],"mistralai/mistral-large-2512":[8,9,8,8,9],"openai/gpt-5.4-mini":[8,9,8,6,8],"google/gemini-2.5-flash":[7,7,8,7,8],"openai/o4-mini":[8,9,7,5,9],"google/gemini-2.5-pro":[8,9,8,8,9],"x-ai/grok-4.1-fast":[9,9,8,8,9],"qwen/qwen3-coder":[7,5,7,4,7],"qwen/qwen3-8b":[5,8,6,2,8],"qwen/qwen3-235b-a22b":[7,9,8,7,9],"deepseek/deepseek-chat-v3-0324":[6,5,7,3,5],"nvidia/llama-3.3-nemotron-super-49b-v1.5":[7,8,7,6,8],"openai/gpt-4.1-mini":[6,5,7,2,5],"meta-llama/llama-4-maverick":[6,6,6,3,7],"meta-llama/llama-4-scout":[5,5,7,3,6]};
+
+const DATA = [{"model":"anthropic/claude-sonnet-4.6","score":{"totalPredicates":298,"uniquePredicates":231,"tierDistribution":{"1":184,"2":21,"3":14,"4":10,"5":21,"6":16,"7":23,"8":9},"avgConfidence":0.9426174496644304,"maxTier":8,"predicateList":["accessRequiredTraversal","acknowledgesUncertainty","acquiredLand","acquiredVia","actedAsLandlordTo","actedOutOf","addressesAudience","adjacentTo","advocatesFor","aimedToPrevent","aimsAt","allowedMissionariesInCharge","appealsToEmotion","appliedSkillsAs","assertsAsFact","assumesReaderKnows","authoredBy","backgrounds","basedAt","becameProfessionOf","believedToHaveBuriedDead","believesThat","bornIn","boundedBy","buildsonArgument","builtOwnHome","causedProhibition","characterizesAs","childOf","choseToStayIn","claimsWithCertainty","classifiedAs","clearedLandFor","collectedSonsFrom","comprisedOf","concedes","concernsFamilyHistory","contactedAuthoritiesMultipleTimes","containsDirectSpeech","contemporaryWith","continuedUntil","conversationallyImplicates","couldNotEndure","count","counterfactuallyAssumes","criticizes","definesTermFor","demonstratedEntrepreneurialSpirit","demonstratedPersistence","dependsOn","descendantOf","describedAs","describedDancersAs","describedFatherAs","differentiatedFrom","disappearedGradually","discoveredSituation","downplays","drawsHistoricalParallel","drawsOnTradition","emphasizes","employedSonsIn","employsGenreConvention","enabledBy","endedWith","enforcedPolicy","essentializes","establishedBaseFor","evaluatesGrandfatherAs","evaluatesPalmIslandAs","evaluatesYarrabahAs","eventuallyResponded","expectedToWorkFor","expressesProudnessAbout","extendedTo","familyIncreased","firstChildBornAt","forbiddenFrom","foregrounds","foundWorkWith","foundedBy","foundedMissionDespiteProhibition","framesAs","frustratedBy","grandchildOf","greaterResponsibilityThan","grewFoodOn","grewOver","grewOwnVegetables","grewUpIn","hadChildAt","hadChildrenWith","hadConnectionTo","hadDifficultySettlingIn","hadFamilyWith","hadInstitution","hadMissionaryInCharge","hadMultipleProfessions","hadNewFamily","hadNowhereToGo","hadPersonalMemoryOf","hadPolicy","hadThreeMissionaries","hasIdentifier","hasPurpose","hasSubject","hasTelephoneNumber","hedgesClaim","heldHighPosition","historicallyContextualizes","holdsOpinionThat","impliesThat","inContrastTo","includedMenWomenAndChildren","includedPromise","informedBy","invokesNorm","involvedBodyPainting","involvedDancing","involvedSeaWork","isA","judgesColonialSystemAs","knewIdentityOf","knowledgeBasedOn","labelledAs","lacksEvidenceFor","lastedAllNight","learnedSkillsAt","leasedLandTo","ledTo","leftDueTo","leftFamilyToMeetTribe","leftMission","locatedAt","locatedIn","locatedNear","marriedTo","metUpWith","morallyFrames","motivatedByKnowledge","movedBackTo","name","narrativizes","navigatedColonialSystem","negotiatedWith","normativelyCharges","notablyOmits","obligatedTo","occurredAround","occurredDuring","ontologicallyCommittedTo","oughtTo","ownedBusinessAt","ownedMultipleBusinesses","ownedShopsIn","partOf","participantsDescribedAs","participatedIn","participatedInBy","periodicizes","permittedTo","placedBoysInCareOf","placedOn","playedWith","populationEstimate","precededBy","precedes","presentsGrandfatherAs","presupposesThat","preventedGrandfather","problematizes","prohibitedFromAssociatingWith","prohibitedFromHavingSayOver","prohibitedFromLeading","prohibitedFromWalkingOn","protectedPeopleFrom","purposeOf","quotedSaying","reactedWith","referencesMovement","reifiesAs","reifiesConcept","relocatedTo","remainsUnnamed","rescuedBy","residedIn","residesAt","residesIn","returnedChildTo","returnedLate","sentTo","servedAs","servedTelos","siblingOf","signedBy","silentOn","situatedAcrossFrom","situatedBetween","situatesInDiscourse","speculatesAbout","stayedAtMission","stayedFor","stayedForExtendedPeriod","stayedToLearn","subsequentlyHadMoreChildren","supersededFounderAuthority","takesForGranted","tookPlaceAlong","travelledTo","treatedAboriginalPeopleAs","treatsAsBad","treatsAsEnduring","treatsAsEssentialProperty","treatsAsGood","treatsAsOccurrent","treatsAsProcess","treatsAsReal","usedAsLandmark","usedAsPlayground","usedCarpentryTo","usesDirectQuote","warns","wasEldestOf","wasLeftBehind","wasSubjectOf","wasSubjectTo","wasWelcomedBy","welcomedTo","workedAtSea","wouldRemovePeopleWith","writtenForExpertise"],"factsPerKToken":9.265592935762701},"usage":{"promptTokens":4252,"completionTokens":27910,"totalTokens":32162},"durationMs":328740},{"model":"anthropic/claude-opus-4.5","score":{"totalPredicates":293,"uniquePredicates":195,"tierDistribution":{"1":220,"2":21,"3":9,"4":2,"5":16,"6":12,"7":7,"8":6},"avgConfidence":0.972354948805461,"maxTier":8,"predicateList":["acquiredLand","acquiredSkillsAt","acquiredVia","addressesAudience","allowedMissionaries","alsoKnownAs","approximateDate","asChildWasNotAllowedToWalkOn","assumesReaderKnows","authoredBy","becameA","becamePropertyOf","becameUpset","believesThat","birthplaceSpecifically","bornIn","broughtBoysToWorkIn","builtOwnHome","childOf","choseToStayIn","clearedLand","closingPhrase","collectedBoys","collectedBoysWhen","concernsFamilyHistoryOf","contactedAuthorities","contactedAuthoritiesMultipleTimes","content","continuedUntil","couldNotBeInCharge","couldNotEndure","couldNotHaveSayOver","currentlyResides","dancedFor","definesTermFor","demonstratesAgency","demonstratesAltruism","demonstratesCommunityConnection","demonstratesConnectionToCountry","demonstratesCulturalContinuity","demonstratesResilience","descendantOf","describedAs","describedFatherAs","destination","disappearedGradually","discoveredSituation","drawsOnTradition","duration","emphasizes","employesGenreConvention","engagedIn","establishedBase","ethnicityOf","eventuallyBecameTired","existedIn","experiencedDisplacement","extendedAcross","extendedPast","extendedTo","foundWorkWith","foundedBy","framesAs","framesAuthoritiesAs","framesGrandfatherAs","givenTo","grandchildOf","grandparentOf","grewFood","grewOwnVegetables","hadChildAt","hadChildhoodPlayground","hadCommunityConnectionsAt","hadDifficultySettling","hadIncreasingFamily","hadMultipleSkills","hadNowhereToGo","hadOccupation","hadSocialStatus","hadStepfather","hadThreeBrothers","hadTribalAffiliation","hasDocumentId","hasLandmark","hasSubject","hasTelephoneNumber","heardAbout","helpedCareFor","historicallyContextualizes","holdsOpinion","implicitlyJudges","impliesThat","includedChildren","includedMen","includedPerson","includedWomen","involvedFamily","involvedMultipleChildren","involvedPerson","isA","knewFamilyIdentity","leftDueTo","leftToMeetTribe","letLandTo","letTo","livedThereFor","locatedAcrossFrom","locatedAt","locatedBetween","locatedIn","locatedNear","locatedOn","married","marriedTo","mayHaveReturnedTo","memberOf","metWithPeopleAt","missionaryAt","motivatedBy","movedBackTo","movedTo","name","normativelyCharges","notAllowedToAssociateWith","notablyOmits","numberOfMembers","occurredAfter","occurredDuring","occurredIn","ontologicallyCommittedTo","ownedBusiness","ownedBy","ownedShopsIn","parentOf","partOf","passedThrough","pickedUp","placedBoysIn","placedBoysInCareOf","playedWith","populationRange","possibleBurialSite","possiblyContains","presenceIn","preservesOralHistory","presupposesThat","promisedInheritance","promisedPermanence","protectedPeopleFrom","providedRefuge","purposeWas","putInChargeOf","quotedAsSaying","reasonForExclusion","referencesHistoricalPeriod","requiredWhiteMissionaries","residesAt","restrictedAssociation","restrictedLeadership","returnedChildTo","returnedTo","rhetoricallyCharacterizes","sentTo","siblingsOf","signedBy","situatesInDiscourse","slowlyDeparted","speculatesAbout","statesPolicy","stayedForSomeLength","stayedToLearn","stepparentOf","streetAddress","tookPlaceAt","transmitsIntergenerationalKnowledge","treatsAsEntity","treatsAsEssentialProperty","usesLocalKnowledge","usesTerminology","wasA","wasBirthplaceOf","wasEldestOf","wasForgotten","wasLateReturning","wasLeftBehind","wasOneOf","wasPlacedOn","wasTold","wasTravellingTo","wasWelcomedTo","wereExpectedTo","wereGettingOut","workedAtSea","wouldSendBackPeople","writtenForPurpose"],"factsPerKToken":9.594917640894653},"usage":{"promptTokens":4251,"completionTokens":26286,"totalTokens":30537},"durationMs":260934},{"model":"mistralai/mistral-medium-3","score":{"totalPredicates":257,"uniquePredicates":205,"tierDistribution":{"1":94,"2":81,"3":14,"4":16,"5":13,"6":12,"7":20,"8":7},"avgConfidence":0.9451361867704297,"maxTier":8,"predicateList":["accessedVia","acknowledgesUncertaintyAbout","acquiredLandVia","addressesAudience","advocatesFor","aimsAt","allowed","alternateScenario","assertsAsFact","assumesReaderKnows","backgroundAssumption","backgrounds","becameA","becamePropertyOf","bornIn","bornOn","built","builtOwnHome","choseToStayIn","citesEvidenceFor","claimsWithCertainty","clearedLandFor","collectedChildren","collectedChildrenFrom","considersImportant","considersPossible","consistedOf","conspicuouslyAbsent","contacted","conversationallyImplicates","conveysEmotionOf","couldBeBuriedAt","couldNotBeInCharge","couldNotBeInChargeOf","couldNotEndure","couldNotHaveSay","couldNotHaveSayOver","counterfactuallyAssumes","deemsImpossible","definesTermFor","describedCorroboreeAs","describedCorroboreeWith","describedFatherAs","describesFoundingOf","describesHistoryOf","designedFor","developedProfessionAs","didNotWant","discoveredChildrenSituation","distinguishesFrom","drawsHistoricalParallel","drawsOnTradition","emphasizes","employsGenreConvention","employsMetaphor","established","establishedForPeople","ethicallyBoundTo","expectedToWork","expressesPrideIn","extendedTo","extendsTo","failsToMention","feelsConnectionTo","foregrounds","forgotChild","foundHardToSettle","foundWorkWith","framesAs","gotUpset","grew","grewOwn","hadChildAt","hadChildWith","hadChildhoodPlayground","hadChildrenWorkIn","hadConcernAbout","hadFatherWith","hadGradualDisappearance","hadGradualDisappearanceFrom","hadIssueOf","hadLearningMotivation","hadMother","hadNoPlaceToGo","hadPlayground","hadPopulationOf","hadPurposeToWelcome","hadRestrictionDueTo","hadSibling","hadStepfather","hadWorkExpectation","hasAuthor","hasGrandfather","hasPositiveViewOf","hasPurpose","hasSubject","hasTelephoneNumber","heardAbout","historicallyContextualizes","holdsOpinionAbout","ifThenWouldBe","implicitlyAssumes","impliesThat","impliesWithoutStating","included","includedPromiseOf","includes","informedBy","isA","knewFamilyIdentity","knowledgeBasedOn","learnedFrom","leftDueTo","leftToMeet","letLandTo","livedOnLandFor","locatedAcrossFrom","locatedNear","locatedOn","locatedPast","married","mayHaveReturnedTo","movedFamilyTo","movedTo","movedWith","naturalizes","notablyOmits","ontologicallyCommittedTo","oughtTo","owned","periodicizes","pickedUpBy","placedChildrenIn","placedChildrenInCare","placedChildrenWith","placedOn","playedWith","presentsAsEstablished","presupposesThat","provided","purposeWasToWelcome","qualifiesStatement","recognizedChildBelonging","referencesMovement","reflectsValueOf","regardsAsEssential","reifiesAs","repeatsForEffect","requiredTravelThrough","requiredWorkAt","residesAt","respondedToLatenessWith","returnedChildTo","returnedToFamily","servedAsRouteTo","servesAs","shouldDo","silentOn","situatesInDiscourse","softensPosition","speculatesAbout","statesAsEstablished","stayedFor","stayedToLearn","suggestsPossibilityOf","takesAsGiven","toBeInChargeOf","toCallHome","tookPlaceAlong","tookPlaceIn","treatsAsEnduring","treatsAsEntity","treatsAsEssentialProperty","treatsAsGood","treatsAsNonNegotiable","treatsAsOccurrent","treatsAsSameEntity","usedFor","usesAnalogy","values","valuesAs","viewsPositively","wasBornAt","wasBornIn","wasForgottenBy","wasLateReturning","wasLateReturningTo","wasLeftOn","wasLocatedNear","wasLocatedPast","wasNotAllowedToAssociateWith","wasStepfatherOf","wasTold","wereAllowedToBeInChargeOf","wereNotAllowedToWalkOn","wereSentTo","workedAt","wouldBeBy","wouldBeDueTo","wouldBeFoundWith","wouldBeSentBy","wouldBelongFor","wouldBelongTo","writtenForExpertise","wroteDocument"],"factsPerKToken":10.603622560547922},"usage":{"promptTokens":3732,"completionTokens":20505,"totalTokens":24237},"durationMs":333515},{"model":"mistralai/mistral-large-2512","score":{"totalPredicates":169,"uniquePredicates":123,"tierDistribution":{"1":104,"2":30,"3":7,"4":7,"5":6,"6":6,"7":6,"8":3},"avgConfidence":0.9603550295858002,"maxTier":8,"predicateList":["acquiredLandThrough","acrossFrom","advocatesFor","allowed","appealsToEmotion","assertsAsFact","assuredThat","authoredBy","becameA","becamePropertyOf","began","bornAtLocation","bornIn","builtOwn","causedBy","childOf","choseToStayIn","clearedLandFor","considersImportant","consistedOf","contacted","continuedDancingDespite","criticizes","dancedUntil","demonstrates","described","disappearedGradually","discoveredThat","downplays","drawsOnTradition","emphasizes","enabledBy","established","evaluatesAs","expectedToWorkForKeep","extendsAcross","extendsPast","extendsTo","followed","forgottenAndLeftAt","foundDifficultToSettleIn","foundWorkWith","framesAs","gotUpsetAbout","grew","hadBirthArea","hadChildAt","hadPlayground","hadPopulationCount","hadStepfatherWhoOwned","hasAddress","hasGrandfather","hasLocation","hasName","hasSibling","hasSubject","hasTelephoneNumber","heardThat","heldPosition","impliesThat","includesPerson","increasedInSize","isA","kickedUpDust","knewIdentityOf","knowledgeBasedOn","lacksEvidenceFor","learnedFrom","ledTo","leftDueTo","leftToMeetTribe","letLandTo","locatedAt","locatedBetween","locatedPast","married","metWith","motherOf","motivatedBy","movedBackTo","movedWithFamilyTo","notablyOmits","occurredDuring","ontologicallyCommittedTo","ownedShopsIn","pickedUpBy","placedChildrenIn","placedChildrenInCareOf","placedOn","playedWith","possiblyBuriedDeadAt","possiblyCausedBy","possiblyReturnedTo","presupposesThat","purposeWasToWelcome","reifiesAs","resolvedBy","respondsTo","restrictedFromAssociatingWith","restrictedFromBeingInChargeDueTo","restrictedFromHavingSayOver","restrictedFromWalkingOn","returnedLate","returnedToFamily","returnedToFamilyBy","sentTo","signedBy","situatesInDiscourse","speculatesAbout","stayedForDuration","tookPlaceAlong","traveledThrough","travelingTo","treatsAsEntity","treatsAsProcess","wantedToLearn","wantedToPrevent","warnsAbout","wasOlder","wereLargeGroup","werePaintedUp","workedAtSeaFor","wouldBelongTo"],"factsPerKToken":9.648321534596938},"usage":{"promptTokens":3732,"completionTokens":13784,"totalTokens":17516},"durationMs":172657},{"model":"openai/gpt-5.4-mini","score":{"totalPredicates":165,"uniquePredicates":119,"tierDistribution":{"1":141,"2":5,"3":5,"4":3,"5":2,"6":6,"7":3},"avgConfidence":0.9654545454545457,"maxTier":7,"predicateList":["aboutTopic","acquiredLandIn","authorOf","became","beganFrom","bornAt","bornIn","broughtToWorkIn","built","cameTo","childOf","choseToStayIn","cleared","collected","concludesWith","contacted","contactedRepeatedly","continuedDancingWhile","couldNotBeInChargeOf","couldNotEndure","couldNotHaveSayOver","count","countRange","crossed","dancedFor","dependedOn","describedAs","describedBy","describedFatherAs","detainedIn","didNotWant","disappearanceFrom","duration","established","evaluatesAs","expectedToWorkFor","extendedPast","finallyAllowed","found","foundItHardTo","foundOutAbout","foundedBy","framesAs","functionOf","givenTo","gotTiredButContinuedLeavingSlowly","gotUpsetAt","grew","grewOlder","hasPart","heardThat","heldPosition","helped","hosted","identifiedAs","impliesSurveillanceOf","included","includedArea","includedRestStopAt","instanceOf","intendedToBelongTo","isA","knewKinshipOf","leftBehindAt","leftDueTo","leftToMeetUpWith","letLandTo","locatedBetween","locatedIn","marriedTo","mayBeLocatedIn","mayHaveReturnedTo","mentions","metUpWith","movedBackTo","name","notAllowedToAssociateWith","notAllowedToWalkOn","occurredAround","onWayTo","owned","ownedBusiness","paintedUp","parentOf","placed","placedInCareOf","placedOn","playedInChildhoodAt","playedWith","presupposesBelongingOf","presupposesKinshipWith","protectsFrom","reached","residesAt","returned","sentTo","signedAs","silentOn","sourceType","stayedFor","stayedInOrderTo","supervisedBy","telephone","title","tookPlaceAlong","traveledSameWayAs","traveledThrough","treatedAsProperty","valuesLandAsHome","wasExcludedBecauseOf","wasExcludedFrom","wasForgottenBy","wasLateReturning","wasTold","welcomed","workedAtSea","workedFor","workedInShops","wouldSendBack"],"factsPerKToken":14.073694984646878},"usage":{"promptTokens":3589,"completionTokens":8135,"totalTokens":11724},"durationMs":45284},{"model":"google/gemini-2.5-flash","score":{"totalPredicates":148,"uniquePredicates":112,"tierDistribution":{"1":110,"2":18,"3":3,"4":5,"5":3,"6":4,"7":3,"8":2},"avgConfidence":0.9878378378378385,"maxTier":8,"predicateList":["acquired","acquiredVia","advocatesFor","assertsAsFact","became","becameA","beganDueTo","believedToBeBuriedAt","believesThat","bornIn","bornOnLocation","builtOwn","caused","choseToStayIn","citesEvidenceFor","clearedLandTo","collectedThemToWorkIn","consistedOf","contacted","couldNotBeInChargeDueTo","couldNotEndure","couldNotHaveSayOver","criticizes","dancedFor","describedFatherAs","didNotWant","differentiatedFrom","disappearanceWas","emphasizes","established","expectedTo","finallyAllowed","foundItHardToSettleIn","foundOutAbout","foundWorkWith","framesAs","gotUpset","hadChildAt","hadFather","hadNoWhereTo","hadPlayground","hadPopulationBetween","hadPosition","hadStepfather","hasAuthor","hasSubject","hasTelephoneNumber","heardThat","highlights","holdsOpinion","impliesThat","isA","isLocatedAt","knewIdentityOf","laterSentTo","ledTo","leftBehind","leftDueTo","leftToMeetUpWith","letParcelOfLandTo","livedThereFor","locatedAcrossFrom","locatedOn","married","mayHaveReturnedTo","metUpWith","movedBackTo","movedTo","movedWith","occurredAround","ontologicallyCommittedTo","owned","pickedUp","placedInCareOf","placedOn","placedThemIn","playedWith","presupposesThat","prevented","purposeWasTo","referencesMovement","residesAt","returned","returnedChildTo","said","signedOffAs","situatedBetween","situatesInDiscourse","startedToSlowlyGoAwayWhen","stayedFor","stayedInDormitoryTo","tookPlaceAlongFrontOf","traveledThrough","traveledTo","treatsAsEssentialProperty","valuesAs","wasAcross","wasDownPast","wasIncreasing","wasLateGettingBack","wasLocatedAt","wasNotAllowedToAssociateWith","wasPast","wasTold","wereGrowingOwn","wereInChargeOf","wereNotAllowedToWalkOn","wereStill","wereStillDancingWhen","workInvolved","wouldBeSentBackIf","wouldBelongTo"],"factsPerKToken":8.263539921831379},"usage":{"promptTokens":3655,"completionTokens":14255,"totalTokens":17910},"durationMs":56280},{"model":"openai/o4-mini","score":{"totalPredicates":130,"uniquePredicates":108,"tierDistribution":{"1":110,"2":10,"3":4,"4":3,"5":3},"avgConfidence":0.9423076923076927,"maxTier":5,"predicateList":["acquired","addressedSubject","addressesAudience","allowed","appealsToEmotion","asTheyGotOlder","author","birthOrder","blockedBy","bornAt","bornIn","built","causedBy","choseToStay","cleared","collected","componentOf","considersImportant","contacted","continuedUntil","couldNotEndure","criticizes","danced","deniedRole","dependsOn","describedAs","disappearanceMode","ensures","established","experiencedDifficultyWith","expressesEmpathyWith","father","forgot","foundWorkWith","foundedBy","grew","hadChildAt","hadEmotion","hadNoPlaceToGo","hadToTravelThrough","hasTelephone","heard","helped","holdsOpinion","holdsPosition","instanceOf","is","lacksEvidenceFor","laterSentTo","leadsTo","ledTo","leftDueTo","leftSlowly","leftTo","letLandTo","locatedAcross","locatedDownPast","locatedIn","locatedPast","maritalStatus","mayHaveReturnedTo","metUpWith","method","movedTo","name","occupation","overlapsTemporallyWith","owned","partOf","participantsAppearance","pickedUp","placed","placedInCareOf","playedAt","playedWith","populationApproximateCount","precedes","providedWorkThatTookTo","purpose","qualifiesStatement","relationTo","residencyDuration","residesAt","restedAt","resultsIn","returnedTo","scale","signed","situatedBetween","someWhoDiedCouldBeBuriedAt","speculatesAbout","statesAsEstablished","status","stayedDuration","stepFather","supportedOperationOf","tookPlaceAt","wantedToPrevent","wasLateReturning","wasNotAllowedTo","wasPlacedOn","wasTold","wentTo","wentWith","wereExpectedTo","wereIn","wereNotAllowedTo","workedIn"],"factsPerKToken":8.269194071623941},"usage":{"promptTokens":3589,"completionTokens":12132,"totalTokens":15721},"durationMs":83034},{"model":"google/gemini-2.5-pro","score":{"totalPredicates":129,"uniquePredicates":106,"tierDistribution":{"1":85,"2":13,"3":4,"4":4,"5":3,"6":5,"7":11,"8":4},"avgConfidence":0.9837209302325585,"maxTier":8,"predicateList":["acquired","address","advocatesFor","allowed","alludesToPolicy","anecdotallySupports","assertsAsFact","authorOf","became","began","bornIn","bornInLocationDetail","built","caused","causedBy","choseToStayIn","cleared","collected","concerns","contacted","couldNotEndure","count","described","describedAs","drawsOnTradition","emphasizes","enabledBy","essentializes","established","expectedTo","experiencedDifficulty","extendedTo","follows","forPurposeOf","forbiddenFrom","forgot","foundOutAbout","foundWorkWith","framesAs","grew","hadChildIn","hadDesire","hadPlayground","hadPurpose","hasPurpose","hasSubject","heardThat","heldPosition","historicallyContextualizes","identifiedAs","impliesThat","included","intendedDuration","intendedToBelongTo","isA","juxtaposes","lacked","ledTo","leftDueTo","leftToMeet","letLandTo","locatedAcrossFrom","locatedIn","married","metWith","movedTo","movedWith","name","notablyOmits","occurredOn","ontologicallyCommittedTo","owned","pickedUp","placedIn","placedInCareOf","playedWith","population","presupposesThat","quotedAsSaying","reifiesAs","reportsBelief","requiredTravelTo","returnedToFamily","situatedBetween","situatesInDiscourse","speculatesAbout","stayedFor","stepParentOf","telephoneNumber","traveledThrough","treatedAsProperty","valuesAsBad","valuesAsGood","wasA","wasAreaOf","wasConsequenceOf","wasEldestOf","wasIncreasing","wasLateReturning","wasNotAllowedToAssociateWith","wasPlacedIn","wasPlacedOn","wasPrerequisiteFor","wasSentTo","wasStillHappeningAt","wasTold"],"factsPerKToken":5.669083717864206},"usage":{"promptTokens":3655,"completionTokens":19100,"totalTokens":22755},"durationMs":161502},{"model":"x-ai/grok-4.1-fast","score":{"totalPredicates":122,"uniquePredicates":114,"tierDistribution":{"1":84,"2":13,"3":6,"4":4,"5":4,"6":5,"7":4,"8":2},"avgConfidence":0.963114754098361,"maxTier":8,"predicateList":["acquiredLandVia","advocatesFor","assertsAsFact","assumesThat","authorOf","became","believedBuriedAt","believesThat","belongsToGenerations","birthplaceOf","bornIn","builtOwn","causedBy","characterizedAs","childOf","choseToStayIn","clearedLandTo","collectedSonsWhenOlder","consequenceOf","contactedAuthoritiesMultipleTimes","continuedUntil","couldNotEndureLivingConditions","criticizes","describedAsByGrandson","disappearanceGradual","dispersedWhenTired","drawsHistoricalParallel","emphasizes","employedSonsAt","employsGenreConvention","enabledBy","enthusiasticAbout","equivalentTo","evaluatesAs","expectedToWorkForKeep","finallyAllowedInCharge","follows","foregrounds","forgottenAndLeftBehind","foundWorkWith","foundedBy","frustratedBy","fullName","gotUpsetAndPlacedBoysInCare","grewOwn","hadChildAt","heardAboutAndEstablishedBaseFor","holdsOpinion","impliesThat","includes","isA","knewBelongedTo","lateReturning","leftDueTo","leftToMeetTribe","letParcelOfLandTo","locatedAcross","locatedAcrossFrom","locatedAt","locatedBetween","locatedDownPast","locatedIn","locatedPast","married","mayHaveReturnedTo","metPeopleAtPlayground","morallyFramesAs","motivatedByFearOf","movedBackToLiveIn","movedToWithNewFamily","notAllowedToWalkOn","occurredAround","oneOfThreeMissionaries","overlapsTemporally","owned","partOf","pickedUpByAndReturned","placedInByAuthorities","placedOnRockDuringRest","playedWith","playgroundAsChild","populationSizeApprox","precedes","presupposesExistenceOf","presupposesThat","prohibitedFromAssociatingWith","prohibitedFromBeingInChargeDueTo","prohibitedFromHavingSayOver","promiseMade","purposeOfStayingInDormitory","purposeToWelcome","quotedAsSaying","referredAs","reifiesAs","residesAt","resultsIn","returnedButHardToSettle","roleAt","sentTo","siblingsOf","signsLetter","speculatesAbout","stayedForLengthOfTime","subjectMatter","telephoneNumber","tookPlaceAlong","traveledThroughToPlayground","treatedAsBinding","treatsAsEssentialProperty","treatsAsProcess","triggeredBy","usesAnalogy","workedAtSeaAndShops","writtenForAudience"],"factsPerKToken":8.739255014326647},"usage":{"promptTokens":3662,"completionTokens":10298,"totalTokens":13960},"durationMs":65739},{"model":"qwen/qwen3-8b","score":{"totalPredicates":113,"uniquePredicates":66,"tierDistribution":{"1":113},"avgConfidence":1,"maxTier":1,"predicateList":["acquiredLand","allowed","became","becamePropertyOf","believedToHaveBuried","builtHome","choseToStayIn","clearedLand","collected","contactedAuthorities","couldNotAssociateWith","couldNotBeInChargeOf","couldNotHaveSayOver","disappearedGradually","establishedBase","foundHardToSettle","foundWorkWith","gotUpset","grewVegetables","hadChild","hadDeal","hadFather","hadLandAcrossRiver","hadLandDownPast","hadLandGivenTo","hadLandPast","hadLandTo","hadLandWhere","hadParticipants","hadPlayground","hadPopulation","hadPosition","hasLocation","hasTelephone","heardAbout","included","leftDueTo","leftTo","letLandTo","livedBetween","married","mayHaveReturnedTo","movedTo","occurredOn","owned","placedIn","placedInCareOf","playedWith","residesIn","returnedTo","talksAbout","tookPlace","wantedToPrevent","wasBornIn","wasBusinessman","wasFoundBy","wasKnownAs","wasPlacedOn","wasReturnedTo","wasToWelcome","wasTold","wasWelcomedBy","wereExpectedToWork","wereSentTo","workedIn","wrote"],"factsPerKToken":9.684607473431608},"usage":{"promptTokens":3649,"completionTokens":8019,"totalTokens":11668},"durationMs":88192},{"model":"qwen/qwen3-coder","score":{"totalPredicates":104,"uniquePredicates":87,"tierDistribution":{"1":76,"2":7,"3":21},"avgConfidence":0.9730769230769238,"maxTier":3,"predicateList":["acquiredLand","allowedMissionaries","authorOf","becameA","becameGovernmentProperty","belongedTo","bornIn","builtHome","camePaintedUp","childOf","choseToStay","clearedLand","collected","contactedAuthorities","couldNotAssociateWith","couldNotBeInCharge","couldNotEndureLivingConditions","couldSendBack","dancedAllNight","describedAs","didNotWant","disappearedGradually","discriminatedAgainst","established","establishedBase","expectedToWorkForKeep","extendedAcrossRiver","extendedDownPast","extendedPast","forgottenByFamily","foundHardToSettle","foundOut","foundWorkWith","gotOlder","gotTired","gotUpset","grewVegetables","hadChildWith","hasSubject","heardThat","learnedThings","leftDueTo","leftOn","leftToMeetTribe","letLandTo","livedThere","locatedAcrossFrom","locatedAt","locatedIn","married","mayBeBuried","mayHaveReturned","movedTo","notAllowedToWalk","owned","ownedShopsIn","pickedUp","placedIn","placedInCare","playedIn","playedWith","residesIn","returnedLate","returnedToFamily","sentTo","sentToWork","servesAs","signedOff","takesPrideIn","tookPlace","valuedCommunity","values","wasA","wasAboriginal","wasCommittedTo","wasCulturallyConnected","wasDenied","wasExcludedFrom","wasMarginalizedBy","wasMixedRace","wasResilient","wasResourceful","wasSkilled","wasTrappedBy","welcomed","wereMarginalized","workedIn"],"factsPerKToken":8.361472905611835},"usage":{"promptTokens":3649,"completionTokens":8789,"totalTokens":12438},"durationMs":84026},{"model":"openai/gpt-4.1-mini","score":{"totalPredicates":66,"uniquePredicates":61,"tierDistribution":{"1":66},"avgConfidence":0.9954545454545453,"maxTier":1,"predicateList":["acquiredLandBy","allowed","authorOf","became","bornAt","bornIn","built","choseToStayIn","clearedLandToGrow","collectedBoysToWorkIn","contacted","describedBy","disappearedGradually","establishedBaseFor","foundHardToSettle","foundOutAbout","foundWorkWith","gotUpset","grew","hadChildAt","hadPlayground","hadToTravelThrough","hasTelephoneNumber","included","lastedUntil","leftDueTo","leftToMeet","letLandTo","livedBetween","locatedAcross","locatedDownPast","locatedPast","marriedTo","mayBeBuriedAt","mayHaveReturnedTo","metUpWith","movedTo","movedWithFamilyTo","occurredAt","ownedBusiness","placedBoysInCareOf","placedInPrison","playedWith","purposeWas","residesAt","returnedChildTo","returnedToFamily","started","wantedToPrevent","wasEldestOf","wasForgottenAndLeft","wasKnownAs","wasLateReturning","wasNotAllowedToAssociateWith","wasNotAllowedToBeInChargeOf","wasPickedUpBy","wasPlacedOn","wasTold","wereExpectedToWorkFor","wereSentTo","workedAt"],"factsPerKToken":7.387508394895903},"usage":{"promptTokens":3590,"completionTokens":5344,"totalTokens":8934},"durationMs":58787},{"model":"deepseek/deepseek-chat-v3-0324","score":{"totalPredicates":61,"uniquePredicates":60,"tierDistribution":{"1":46,"2":15},"avgConfidence":0.9672131147540982,"maxTier":2,"predicateList":["acquiredLandThrough","authorOf","became","bornIn","boundedBy","builtOwnHome","choseToStayIn","classifiedChildrenAs","clearedLandFor","departedGradually","describedAs","documentsSubject","duration","engagedIn","established","foundWorkWith","hadChildAt","hadDifficultySettling","hadFacility","hadPlaygroundAt","hadPopulation","hadPosition","hasContactNumber","involved","involvedIncident","leasedLandTo","leftDueTo","leftTemporarily","locatedAt","locatedBetween","married","metCommunityAt","motivatedBy","motivationForStaying","movedBackTo","movedTo","occurredAt","operatedShopsIn","originatedFrom","ownedBusiness","petitioned","placedChildrenInCare","playedWith","possibleBurialSite","purposeWas","reactedToDeparture","requiredTravelThrough","residesAt","wasAssured","wasBarredFrom","wasBusinessman","wasExpectedTo","wasHeldTo","wasPlacedIn","wasPlacedUnder","wasProhibitedFrom","wasReturnedBy","wasWelcomedTo","wereSentTo","workedAtSea"],"factsPerKToken":7.416413373860182},"usage":{"promptTokens":3629,"completionTokens":4596,"totalTokens":8225},"durationMs":129155},{"model":"qwen/qwen3-235b-a22b","score":{"totalPredicates":38,"uniquePredicates":34,"tierDistribution":{"1":22,"2":5,"3":2,"4":1,"5":2,"6":2,"7":3,"8":1},"avgConfidence":0.9684210526315787,"maxTier":8,"predicateList":["acquiredLandThrough","advocatesFor","affiliatedWith","bornIn","built","causedBy","clearedLandFor","couldNotBeInChargeOf","emphasizes","founded","foundedBy","framesAs","grew","isA","leasedLandTo","leftAffiliationBecause","livedIn","locatedAdjacentTo","locatedBetween","marriedTo","occurredOn","parentOf","partOf","placedIn","playedWith","presupposesExistenceOf","referencesMovement","reifiesAs","residesIn","restricts","speculatesAbout","treatedAs","treatsAsCulturalPractice","welcomedWith"],"factsPerKToken":4.7476261869065475},"usage":{"promptTokens":3649,"completionTokens":4355,"totalTokens":8004},"durationMs":77380},{"model":"nvidia/llama-3.3-nemotron-super-49b-v1.5","score":{"totalPredicates":32,"uniquePredicates":32,"tierDistribution":{"1":25,"3":2,"5":1,"6":1,"7":2,"8":1},"avgConfidence":0.9593749999999999,"maxTier":8,"predicateList":["acquiredLandVia","advocatesFor","authored","became","bornIn","counterfactuallyAssumes","established","excludedFromLeadershipDueTo","givenLand","hasMissionary","hasSkinColor","hasSubject","holdsPosition","leasedLandTo","leftDueTo","leftToMeet","livedOn","locatedIn","locatedPast","married","occurredIn","owns","placedIn","placedOn","playedAt","playedWith","presupposesThat","purpose","referencesLocation","returnedTo","treatedAsEntityWithPurpose","usesRhetoricalDescription"],"factsPerKToken":3.7554277666940497},"usage":{"promptTokens":3631,"completionTokens":4890,"totalTokens":8521},"durationMs":95360},{"model":"meta-llama/llama-4-scout","score":{"totalPredicates":27,"uniquePredicates":27,"tierDistribution":{"1":23,"3":4},"avgConfidence":0.9851851851851849,"maxTier":3,"predicateList":["acquiredLandThrough","becameCarpenterAndMusician","bornIn","describedFatherAs","established","forgotChildOn","givenTo","hadMissionariesInCharge","hadToContactAuthorities","hasPlayground","hasTelephoneNumber","isAuthorOf","leasedLandTo","leftToMeetTribe","marriedTo","ownedBecheDeMerSmokingPlant","placedIn","playedWith","putChildrenInCareOf","residesAt","tookPlaceAt","wasBornIn","wasEstablishedBecause","wasHeldToWelcome","wasNotAllowedTo","wasNotAllowedToAssociateWith","wentTo"],"factsPerKToken":4.752684386551663},"usage":{"promptTokens":3606,"completionTokens":2075,"totalTokens":5681},"durationMs":31736},{"model":"meta-llama/llama-4-maverick","score":{"totalPredicates":23,"uniquePredicates":23,"tierDistribution":{"1":20,"2":2,"7":1},"avgConfidence":0.9782608695652172,"maxTier":7,"predicateList":["acquiresLand","authorOf","bornIn","establishes","experiencesRacism","extendsTo","givenBy","hasTelephoneNumber","isBusinessman","isTranscriptionOf","leavesFamily","leftBehind","letsLandTo","livesAt","marries","owns","placedIn","playsWith","possiblyBuried","putInCharge","reifiesAs","takesPlace","treatedAs"],"factsPerKToken":4.117436448263516},"usage":{"promptTokens":3609,"completionTokens":1977,"totalTokens":5586},"durationMs":22424},{"model":"anthropic/claude-haiku-4.5","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":4251,"completionTokens":22514,"totalTokens":26765},"durationMs":105520,"error":"JSON parse failed"},{"model":"qwen/qwen3-coder-plus","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"durationMs":360000,"error":"Error: Timeout after 360s"},{"model":"x-ai/grok-4","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":4191,"completionTokens":19311,"totalTokens":23502},"durationMs":293271,"error":"JSON parse failed"},{"model":"nvidia/nemotron-3-nano-30b-a3b","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":3743,"completionTokens":32768,"totalTokens":36511},"durationMs":303133,"error":"JSON parse failed"},{"model":"deepseek/deepseek-v4-flash","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":0,"completionTokens":0,"totalTokens":0},"durationMs":360001,"error":"Error: Timeout after 360s"},{"model":"openai/gpt-4.1","score":{"totalPredicates":0,"uniquePredicates":0,"tierDistribution":{},"avgConfidence":0,"maxTier":0,"predicateList":[],"factsPerKToken":0},"usage":{"promptTokens":3590,"completionTokens":8581,"totalTokens":12171},"durationMs":72339,"error":"JSON parse failed"}];
+
+function calcCost(model, usage) {
+  const p = PRICING[model];
+  if (!p) return 0;
+  return usage.promptTokens * p.in + usage.completionTokens * p.out;
+}
+
+function fmtCost(c) {
+  if (c === 0) return '-';
+  if (c < 0.001) return '$' + c.toFixed(5);
+  if (c < 0.01) return '$' + c.toFixed(4);
+  return '$' + c.toFixed(3);
+}
+
+function costClass(c) {
+  if (c === 0) return '';
+  if (c < 0.003) return 'cost-good';
+  if (c < 0.02) return 'cost-mid';
+  return 'cost-high';
+}
+
+const valid = DATA.filter(d => !d.error && d.score.totalPredicates > 0);
+const failed = DATA.filter(d => d.error || d.score.totalPredicates === 0);
+
+// Summary cards
+const best = valid.reduce((a,b) => a.score.totalPredicates > b.score.totalPredicates ? a : b);
+const cheapest = valid.reduce((a,b) => {
+  const ca = calcCost(a.model, a.usage), cb = calcCost(b.model, b.usage);
+  const pa = a.score.totalPredicates > 0 ? ca/a.score.totalPredicates : Infinity;
+  const pb = b.score.totalPredicates > 0 ? cb/b.score.totalPredicates : Infinity;
+  return pa < pb ? a : b;
+});
+const fastest = valid.reduce((a,b) => a.durationMs < b.durationMs ? a : b);
+const efficient = valid.reduce((a,b) => a.score.factsPerKToken > b.score.factsPerKToken ? a : b);
+
+const cards = [
+  { label: 'Most Facts', value: best.score.totalPredicates, detail: best.model.split('/')[1] },
+  { label: 'Best $/Fact', value: fmtCost(calcCost(cheapest.model, cheapest.usage) / cheapest.score.totalPredicates), detail: cheapest.model.split('/')[1] },
+  { label: 'Fastest', value: (fastest.durationMs/1000).toFixed(1)+'s', detail: fastest.model.split('/')[1] },
+  { label: 'Best F/kT', value: efficient.score.factsPerKToken.toFixed(1), detail: efficient.model.split('/')[1] },
+  { label: 'Best $/1k Facts', value: '$' + (calcCost(cheapest.model, cheapest.usage) / cheapest.score.totalPredicates * 1000).toFixed(2), detail: cheapest.model.split('/')[1] },
+  { label: 'Best Quality', value: (() => { let best='',bv=0; for(const[m,s] of Object.entries(QSCORES)){const a=s.reduce((x,y)=>x+y,0)/5;if(a>bv){bv=a;best=m;}} return bv.toFixed(1); })(), detail: (() => { let best='',bv=0; for(const[m,s] of Object.entries(QSCORES)){const a=s.reduce((x,y)=>x+y,0)/5;if(a>bv){bv=a;best=m;}} return best.split('/')[1]; })() },
+  { label: 'Models Tested', value: DATA.length, detail: valid.length + ' succeeded' },
+  { label: 'Total Predicates', value: valid.reduce((s,d) => s + d.score.totalPredicates, 0), detail: 'across all models' },
+];
+const cardsEl = document.getElementById('summary-cards');
+cards.forEach(c => {
+  cardsEl.innerHTML += `<div class="card"><div class="label">${c.label}</div><div class="value">${c.value}</div><div class="detail">${c.detail}</div></div>`;
+});
+
+// Legend
+const legendEl = document.getElementById('legend');
+for (let t = 1; t <= 8; t++) {
+  legendEl.innerHTML += `<div class="legend-item"><div class="legend-swatch" style="background:${TIER_COLORS[t]}"></div>T${t}: ${TIER_NAMES[t]}</div>`;
+}
+
+// Table
+const cols = [
+  { key: 'model', label: 'Model', cls: 'model-name', sort: 'str' },
+  { key: 'facts', label: 'Facts', cls: 'num', sort: 'num' },
+  { key: 'uniq', label: 'Unique', cls: 'num', sort: 'num' },
+  { key: 'tiers', label: 'Tiers', cls: 'num', sort: 'num' },
+  { key: 'tierbar', label: 'Tier Distribution', cls: 'bar-cell', sort: null },
+  { key: 't1', label: 'T1', cls: 'num', sort: 'num' },
+  { key: 't2', label: 'T2', cls: 'num', sort: 'num' },
+  { key: 't3', label: 'T3', cls: 'num', sort: 'num' },
+  { key: 't4', label: 'T4', cls: 'num', sort: 'num' },
+  { key: 't5', label: 'T5', cls: 'num', sort: 'num' },
+  { key: 't6', label: 'T6', cls: 'num', sort: 'num' },
+  { key: 't7', label: 'T7', cls: 'num', sort: 'num' },
+  { key: 't8', label: 'T8', cls: 'num', sort: 'num' },
+  { key: 'conf', label: 'Conf', cls: 'num', sort: 'num' },
+  { key: 'tokIn', label: 'Tok In', cls: 'num', sort: 'num' },
+  { key: 'tokOut', label: 'Tok Out', cls: 'num', sort: 'num' },
+  { key: 'cost', label: 'Cost', cls: 'num', sort: 'num' },
+  { key: 'costPerFact', label: '$/Fact', cls: 'num', sort: 'num' },
+  { key: 'cost1k', label: '$/1k Facts', cls: 'num', sort: 'num' },
+  { key: 'fkt', label: 'F/kT', cls: 'num', sort: 'num' },
+  { key: 'time', label: 'Time', cls: 'num', sort: 'num' },
+  { key: 'qOnto', label: 'Onto', cls: 'num', sort: 'num' },
+  { key: 'qHyg', label: 'Hyg', cls: 'num', sort: 'num' },
+  { key: 'qGround', label: 'Ground', cls: 'num', sort: 'num' },
+  { key: 'qTier', label: 'TierQ', cls: 'num', sort: 'num' },
+  { key: 'qGraph', label: 'Graph', cls: 'num', sort: 'num' },
+  { key: 'qAvg', label: 'Avg Q', cls: 'num', sort: 'num' },
+];
+
+function buildRows() {
+  return [...valid, ...failed].map(d => {
+    const td = d.score.tierDistribution || {};
+    const cost = calcCost(d.model, d.usage);
+    const cpf = d.score.totalPredicates > 0 ? cost / d.score.totalPredicates : 0;
+    const tiersHit = [1,2,3,4,5,6,7,8].filter(t => (td[t]||0) > 0).length;
+    return {
+      _raw: d,
+      _error: !!d.error || d.score.totalPredicates === 0,
+      model: d.model,
+      facts: d.score.totalPredicates,
+      uniq: d.score.uniquePredicates,
+      tiers: tiersHit,
+      tierbar: td,
+      t1: td[1]||0, t2: td[2]||0, t3: td[3]||0, t4: td[4]||0,
+      t5: td[5]||0, t6: td[6]||0, t7: td[7]||0, t8: td[8]||0,
+      conf: d.score.avgConfidence,
+      tokIn: d.usage.promptTokens,
+      tokOut: d.usage.completionTokens,
+      cost: cost,
+      costPerFact: cpf,
+      cost1k: cpf * 1000,
+      fkt: d.score.factsPerKToken,
+      time: d.durationMs / 1000,
+      qOnto: (QSCORES[d.model] || [])[0] || 0,
+      qHyg: (QSCORES[d.model] || [])[1] || 0,
+      qGround: (QSCORES[d.model] || [])[2] || 0,
+      qTier: (QSCORES[d.model] || [])[3] || 0,
+      qGraph: (QSCORES[d.model] || [])[4] || 0,
+      qAvg: QSCORES[d.model] ? (QSCORES[d.model].reduce((a,b)=>a+b,0) / 5) : 0,
+    };
+  });
+}
+
+let rows = buildRows();
+let sortCol = 'facts';
+let sortDir = 'desc';
+
+function tierBarHTML(td, total) {
+  if (total === 0) return '<div class="tier-bar"></div>';
+  let html = '<div class="tier-bar">';
+  for (let t = 1; t <= 8; t++) {
+    const n = td[t] || 0;
+    if (n === 0) continue;
+    const pct = (n / total * 100).toFixed(1);
+    html += `<div class="seg seg-t${t}" style="width:${pct}%" data-label="T${t}: ${n} (${Math.round(pct)}%)"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderTable() {
+  const hdr = document.getElementById('table-header');
+  hdr.innerHTML = '';
+  cols.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c.label;
+    th.className = c.cls || '';
+    if (c.key === sortCol) th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    if (c.sort) {
+      th.onclick = () => {
+        if (sortCol === c.key) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+        else { sortCol = c.key; sortDir = 'desc'; }
+        renderTable();
+      };
+    }
+    hdr.appendChild(th);
+  });
+
+  const sorted = [...rows].sort((a,b) => {
+    if (a._error && !b._error) return 1;
+    if (!a._error && b._error) return -1;
+    const col = cols.find(c => c.key === sortCol);
+    if (!col || !col.sort) return 0;
+    let va = a[sortCol], vb = b[sortCol];
+    if (col.sort === 'str') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  sorted.forEach(r => {
+    const tr = document.createElement('tr');
+    if (r._error) tr.className = 'error';
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      td.className = c.cls || '';
+      if (c.key === 'model') {
+        td.textContent = r.model;
+      } else if (c.key === 'tierbar') {
+        td.innerHTML = tierBarHTML(r.tierbar, r.facts);
+      } else if (c.key === 'tiers') {
+        td.textContent = r.tiers + '/8';
+      } else if (c.key === 'conf') {
+        td.textContent = r.conf > 0 ? r.conf.toFixed(2) : '-';
+      } else if (c.key === 'cost') {
+        td.textContent = fmtCost(r.cost);
+        td.className += ' ' + costClass(r.cost);
+      } else if (c.key === 'costPerFact') {
+        td.textContent = r.facts > 0 ? fmtCost(r.costPerFact) : '-';
+        td.className += ' ' + costClass(r.costPerFact * 100);
+      } else if (c.key === 'cost1k') {
+        if (r.facts > 0 && r.cost1k > 0) {
+          td.textContent = '$' + r.cost1k.toFixed(2);
+          td.className += ' ' + (r.cost1k < 0.5 ? 'cost-good' : r.cost1k < 2 ? 'cost-mid' : 'cost-high');
+        } else { td.textContent = '-'; }
+      } else if (c.key === 'fkt') {
+        td.textContent = r.fkt > 0 ? r.fkt.toFixed(1) : '-';
+      } else if (c.key === 'time') {
+        td.textContent = r.time.toFixed(1) + 's';
+      } else if (c.key.startsWith('q')) {
+        const v = r[c.key];
+        if (v > 0) {
+          td.textContent = c.key === 'qAvg' ? v.toFixed(1) : v;
+          td.style.color = v >= 8 ? 'var(--green)' : v >= 6 ? 'var(--orange)' : 'var(--red)';
+          if (v >= 9) td.style.fontWeight = '700';
+        } else { td.textContent = '-'; }
+      } else if (c.key === 'tokIn' || c.key === 'tokOut') {
+        td.textContent = r[c.key] > 0 ? r[c.key].toLocaleString() : '-';
+      } else {
+        td.textContent = r[c.key] || (r._error ? '-' : '0');
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+renderTable();
+
+// Predicates accordion
+const predsEl = document.getElementById('preds-list');
+[...valid].sort((a,b) => b.score.totalPredicates - a.score.totalPredicates).forEach(d => {
+  const div = document.createElement('div');
+  div.className = 'pred-model';
+  const preds = d.score.predicateList || [];
+  div.innerHTML = `
+    <div class="pred-header" onclick="this.nextElementSibling.classList.toggle('open')">
+      <span>${d.model} <span style="color:var(--text-muted);font-weight:400">(${preds.length} unique)</span></span>
+      <span style="color:var(--text-muted)">▾</span>
+    </div>
+    <div class="pred-body">
+      <div class="pred-tags">${preds.map(p => `<span class="pred-tag">${p}</span>`).join('')}</div>
+    </div>
+  `;
+  predsEl.appendChild(div);
+});
+</script>
+</body>
+</html>
