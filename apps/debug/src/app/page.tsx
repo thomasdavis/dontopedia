@@ -156,7 +156,7 @@ function ExpandedRow({ job }: { job: Job }) {
                   <tr key={i} style={{ borderBottom: "1px solid #21262d" }}>
                     <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11 }}>{f.subject}</td>
                     <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, color: "#58a6ff" }}>{f.predicate}</td>
-                    <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(f.object || "")}</td>
+                    <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: f.object ? "#c9d1d9" : "#484f58" }}>{f.object || "—"}</td>
                     <td style={{ padding: "4px 8px", fontSize: 11 }}>L{f.maturity}</td>
                   </tr>
                 ))}
