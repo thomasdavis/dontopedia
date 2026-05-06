@@ -119,18 +119,20 @@ export default function FirehosePage() {
 
   // SSE connection for live events
   useEffect(() => {
-    const es = new EventSource(`${API}/firehose`);
+    const es = new EventSource(`${API}/firehose/stream`);
     es.addEventListener("connected", () => setConnected(true));
     es.addEventListener("event", (e) => {
       try {
         const evt: AuditEvent = JSON.parse(e.data);
         setTotalReceived(n => n + 1);
+        setConnected(true);
         if (!paused) {
           eventsRef.current = [evt, ...eventsRef.current].slice(0, 5000);
           setLiveEvents([...eventsRef.current]);
         }
       } catch {}
     });
+    es.onopen = () => setConnected(true);
     es.onerror = () => setConnected(false);
     return () => es.close();
   }, [paused]);
