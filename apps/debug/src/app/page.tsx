@@ -207,7 +207,10 @@ export default function QueuePage() {
 
   return (
     <div style={{ padding: 20, maxWidth: 1600, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16, color: "#f0f6fc" }}>Extraction Queue</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#f0f6fc", margin: 0 }}>Extraction Queue</h1>
+        <a href="/firehose" style={{ color: "#58a6ff", fontSize: 13, textDecoration: "none" }}>Firehose &rarr;</a>
+      </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
         <StatCard label="Total" value={data.total} />
