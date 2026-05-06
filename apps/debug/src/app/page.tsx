@@ -101,7 +101,7 @@ function ExpandedRow({ job }: { job: Job }) {
       return;
     }
     Promise.all([
-      fetch(`${API}/jobs/${encodeURIComponent(job.id)}/facts`).then((r) => r.json()),
+      fetch(`${API}/jobs/${encodeURIComponent(job.id)}/facts?limit=1000`).then((r) => r.json()),
       fetch(`${API}/jobs/${encodeURIComponent(job.id)}/source`).then((r) => r.json()),
     ])
       .then(([factsData, sourceData]) => {
@@ -152,7 +152,7 @@ function ExpandedRow({ job }: { job: Job }) {
                 </tr>
               </thead>
               <tbody>
-                {facts.map((f, i) => (
+                {facts.slice(0, 1000).map((f, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid #21262d" }}>
                     <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11 }}>{f.subject}</td>
                     <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, color: "#58a6ff" }}>{f.predicate}</td>
