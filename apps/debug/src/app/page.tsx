@@ -33,6 +33,7 @@ interface FactRow {
   object: string | null;
   maturity: number;
   polarity: string;
+  tier?: number;
 }
 
 interface SourceData {
@@ -148,6 +149,7 @@ function ExpandedRow({ job }: { job: Job }) {
                   <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Subject</th>
                   <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Predicate</th>
                   <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Object</th>
+                  <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Tier</th>
                   <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Mat</th>
                 </tr>
               </thead>
@@ -157,6 +159,7 @@ function ExpandedRow({ job }: { job: Job }) {
                     <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11 }}>{f.subject}</td>
                     <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, color: "#58a6ff" }}>{f.predicate}</td>
                     <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: f.object ? "#c9d1d9" : "#484f58" }}>{f.object || "—"}</td>
+                    <td style={{ padding: "4px 8px", fontSize: 11, color: "#8b949e" }}>{f.tier ? `T${f.tier}` : "—"}</td>
                     <td style={{ padding: "4px 8px", fontSize: 11 }}>L{f.maturity}</td>
                   </tr>
                 ))}
