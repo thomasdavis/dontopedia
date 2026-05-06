@@ -185,11 +185,12 @@ export default function QueuePage() {
 
   const refresh = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/jobs`);
+      const url = filter === "all" ? `${API}/jobs` : `${API}/jobs?status=${filter}`;
+      const r = await fetch(url);
       const d = await r.json();
       setData(d);
     } catch {}
-  }, []);
+  }, [filter]);
 
   useEffect(() => {
     refresh();
@@ -199,7 +200,7 @@ export default function QueuePage() {
 
   if (!data) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>;
 
-  const jobs = filter === "all" ? data.jobs : data.jobs.filter((j) => j.status === filter);
+  const jobs = data.jobs;
   const s = data.summary || {};
   const totalFacts = data.jobs.reduce((a, j) => a + (j.facts_extracted || 0), 0);
   const totalCost = data.jobs.reduce((a, j) => a + (j.usage?.cost || 0), 0);
