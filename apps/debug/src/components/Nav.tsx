@@ -7,6 +7,7 @@ const links = [
   { href: "/firehose", label: "Firehose" },
   { href: "/pulse", label: "Pulse" },
   { href: "/predicates", label: "Predicates" },
+  { href: "/report", label: "Report" },
 ];
 
 export default function Nav() {
