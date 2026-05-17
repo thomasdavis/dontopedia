@@ -21,6 +21,7 @@ import { AssertFact } from "@/components/AssertFact";
 import { ClaimsList, type SerializedClaim } from "@/components/ClaimsList";
 import { OtherFacts, type OtherFactRow } from "@/components/OtherFacts";
 import { ActivitySpark } from "@/components/ActivitySpark";
+import { ReferencesList, type RefRow } from "@/components/ReferencesList";
 import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
@@ -358,6 +359,31 @@ export default async function ArticlePage({
     // Non-fatal.
   }
 
+  // References as a compact data array. Includes a derived domain
+  // (host from URL) so the user can filter by source site at a glance.
+  // MUST run after sourceUrls / sourceNames / sourceContexts are
+  // populated above, otherwise we'd hit a TDZ error.
+  const refRows: RefRow[] = [...refs.entries()].map(([ctx, num]) => {
+    const url = sourceUrls.get(ctx) ?? null;
+    let domain: string | null = null;
+    if (url) {
+      try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch { /* skip */ }
+    }
+    const baseLocalHref = contextHref(ctx);
+    const localHref = ctx.startsWith("ctx:research/") && baseLocalHref
+      ? `${baseLocalHref}?subject=${encodeURIComponent(slug)}`
+      : baseLocalHref;
+    return {
+      ctx,
+      num,
+      name:      sourceNames.get(ctx) ?? prettifyContext(ctx),
+      domain,
+      url,
+      localHref,
+      kind:      sourceContexts.get(ctx)?.kind ?? null,
+    };
+  });
+
   const toc = groups.map((g) => ({
     href: `#pred-${encodeURIComponent(g.predicate)}`,
     label: prettifyLabel("x:" + g.predicate),
@@ -611,50 +637,9 @@ export default async function ArticlePage({
                   </div>
                 </PredicateSection>
 
-                {refs.size > 0 && (
-                  <PredicateSection id="references" title="References">
-                    <ol className={css.refList}>
-                      {[...refs.entries()].map(([ctx, n]) => {
-                        const meta = sourceContexts.get(ctx);
-                        const url = sourceUrls.get(ctx);
-                        const baseLocalHref = contextHref(ctx);
-                        const localHref = ctx.startsWith("ctx:research/") && baseLocalHref
-                          ? `${baseLocalHref}?subject=${encodeURIComponent(slug)}`
-                          : baseLocalHref;
-                        const name = sourceNames.get(ctx) ?? prettifyContext(ctx);
-                        return (
-                          <li key={ctx} id={`ref-${n}`}>
-                            {url ? (
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={css.refLink}
-                              >
-                                {name}
-                              </a>
-                            ) : (
-                              localHref ? (
-                                <Link href={localHref as any} className={css.refInternalLink}>
-                                  {name}
-                                </Link>
-                              ) : (
-                                <span className={css.refLabel}>{name}</span>
-                              )
-                            )}
-                            {localHref && url && (
-                              <Link href={localHref as any} className={css.refContextLink}>
-                                view context
-                              </Link>
-                            )}
-                            {meta && (
-                              <span className={css.refKind}>{meta.kind}</span>
-                            )}
-                            <code className={css.refCtx}>{ctx}</code>
-                          </li>
-                        );
-                      })}
-                    </ol>
+                {refRows.length > 0 && (
+                  <PredicateSection id="references" title={`References (${refRows.length.toLocaleString()})`}>
+                    <ReferencesList rows={refRows} />
                   </PredicateSection>
                 )}
 
