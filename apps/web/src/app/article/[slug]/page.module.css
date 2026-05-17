@@ -513,3 +513,73 @@
   font-size: 0.8125rem;
   margin-left: 4px;
 }
+
+/* --- Navigation polish: smooth anchor jumps + highlight target. --- */
+.article :global(html) { scroll-behavior: smooth; }
+.section {
+  /* Pad the scroll target so the anchored heading isn't pinned to the
+   * top edge of the viewport — gives a little visual breathing room. */
+  scroll-margin-top: 16px;
+}
+.section:target > .h2 {
+  background: linear-gradient(180deg, #fff8c5 0%, #fef9e7 100%);
+  outline: 2px solid #f4cd55;
+  border-radius: 3px;
+  animation: targetFade 1.6s ease-out forwards;
+}
+@keyframes targetFade {
+  from { background: linear-gradient(180deg, #fff8c5 0%, #fef9e7 100%); }
+  to   { background: transparent; outline-color: transparent; }
+}
+
+/* References use a different list element, but a deep-linked /article/foo#ref-7
+ * should still be highlighted briefly when the page lands on it. */
+.refList li:target,
+:global(.references-list-module__row):target {
+  background: #fff8c5;
+  outline: 1px solid #f4cd55;
+  animation: targetFade 1.6s ease-out forwards;
+}
+
+/* Floating back-to-top button. Pure CSS; appears after a bit of scroll
+ * via :focus-within trick isn't reliable, so we just position it
+ * absolutely and let users opt in. */
+.toTop {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0645ad;
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.125rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.toTop:hover { opacity: 1; }
+@media (max-width: 720px) {
+  .toTop { right: 16px; bottom: 16px; }
+}
+
+/* TocHighlighter sets data-current on the link matching the currently-
+ * visible section. CSS gives it a left-rule + bold to feel "selected". */
+.toc a[data-current="true"] {
+  background: #eaf2ff;
+  border-left: 3px solid #0645ad;
+  margin-left: -3px;
+  padding-left: 3px;
+  font-weight: 500;
+}
+
+@media (min-width: 1200px) {
+  .toc a[data-current="true"] {
+    background: #fff;
+  }
+}

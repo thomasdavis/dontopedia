@@ -23,6 +23,7 @@ import { OtherFacts, type OtherFactRow } from "@/components/OtherFacts";
 import { ActivitySpark } from "@/components/ActivitySpark";
 import { ReferencesList, type RefRow } from "@/components/ReferencesList";
 import { SectionFilter } from "@/components/SectionFilter";
+import { TocHighlighter } from "@/components/TocHighlighter";
 import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
@@ -417,7 +418,8 @@ export default async function ArticlePage({
 
         <RetractedToggleProvider>
           <div className={css.article}>
-            <h1 className={css.title}>{label}</h1>
+            <TocHighlighter />
+            <h1 id="top" className={css.title}>{label}</h1>
             <p className={css.subtitle}>
               From <strong>Dontopedia</strong>, the open, paraconsistent wiki.
               {lastUpdated && (
@@ -683,6 +685,14 @@ export default async function ArticlePage({
           </div>
         </RetractedToggleProvider>
       </article>
+      <a
+        href="#top"
+        className={css.toTop}
+        aria-label="Back to top"
+        title="Back to top"
+      >
+        ↑
+      </a>
     </main>
   );
 }
