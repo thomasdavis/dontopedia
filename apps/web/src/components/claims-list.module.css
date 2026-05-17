@@ -97,3 +97,19 @@
   margin-left: 6px;
   white-space: nowrap;
 }
+
+.showMore {
+  margin-top: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: #0645ad;
+  background: transparent;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.showMore:hover {
+  background: #f8f9fa;
+  text-decoration: underline;
+}

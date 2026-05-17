@@ -141,3 +141,17 @@
 .muted {
   color: var(--ddp-color-on-surface-variant);
 }
+
+.showMore {
+  display: block;
+  margin: var(--ddp-space-3) auto;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 0.875rem;
+  color: #0645ad;
+  background: #f8f9fa;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.showMore:hover { background: #eaecf0; }

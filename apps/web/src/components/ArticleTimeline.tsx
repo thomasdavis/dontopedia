@@ -1,8 +1,10 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Statement } from "@donto/client";
 import { classifyContext, contextLabel, formatObject, iriLabel } from "@dontopedia/sdk";
 import css from "./article-timeline.module.css";
+
+const DEFAULT_EVENTS_VISIBLE = 200;
 
 /**
  * Year-grouped vertical timeline for a subject's currently-believed facts,
@@ -36,26 +38,64 @@ export function ArticleTimeline({ rows }: { rows: Statement[] }) {
     };
   }, [rows]);
 
+  // Progressive disclosure: timelines on chatty subjects can have 5k+
+  // events. Default render: most-recent ~200 events across years. User
+  // clicks Show all to expand. SSR-stable because state seeds based on row
+  // count.
+  const totalEvents = undated.length + years.reduce((n, [, ys]) => n + ys.length, 0);
+  const [expanded, setExpanded] = useState(false);
+  const cap = expanded ? Number.POSITIVE_INFINITY : DEFAULT_EVENTS_VISIBLE;
+
+  let budget = cap;
+  const visibleUndated = undated.slice(0, budget);
+  budget = Math.max(0, budget - visibleUndated.length);
+  const visibleYears: typeof years = [];
+  for (const [y, rs] of years) {
+    if (budget <= 0) break;
+    visibleYears.push([y, rs.slice(0, budget)]);
+    budget -= rs.length;
+  }
+  const shown = visibleUndated.length + visibleYears.reduce((n, [, ys]) => n + ys.length, 0);
+  const hidden = totalEvents - shown;
+
   if (rows.length === 0) {
     return <p className={css.empty}>No dated events yet.</p>;
   }
 
   return (
     <div className={css.timeline}>
-      {undated.length > 0 && (
+      {visibleUndated.length > 0 && (
         <Section label={`${undated.length} undated`}>
-          {undated.map((r) => (
+          {visibleUndated.map((r) => (
             <Event key={r.statement_id} row={r} />
           ))}
         </Section>
       )}
-      {years.map(([year, rows]) => (
+      {visibleYears.map(([year, rows]) => (
         <Section key={year} label={String(year)}>
           {rows.map((r) => (
             <Event key={r.statement_id} row={r} />
           ))}
         </Section>
       ))}
+      {hidden > 0 && !expanded && (
+        <button
+          type="button"
+          className={css.showMore}
+          onClick={() => setExpanded(true)}
+        >
+          Show all {totalEvents.toLocaleString()} events ({hidden.toLocaleString()} hidden)
+        </button>
+      )}
+      {expanded && totalEvents > DEFAULT_EVENTS_VISIBLE && (
+        <button
+          type="button"
+          className={css.showMore}
+          onClick={() => setExpanded(false)}
+        >
+          Collapse to most recent
+        </button>
+      )}
     </div>
   );
 }

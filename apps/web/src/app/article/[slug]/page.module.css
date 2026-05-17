@@ -452,3 +452,42 @@
 .seeAlso a:hover {
   text-decoration: underline;
 }
+
+/* At-a-glance stats strip — sits just above the toolbar. */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: var(--ddp-space-3) 0 var(--ddp-space-2);
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #eaecf0;
+  border-left: 3px solid #0645ad;
+  font-size: 0.875rem;
+  color: #54595d;
+}
+.stat strong {
+  color: #202122;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.statSep { color: #a2a9b1; }
+.statWarn strong { color: #b32424; }
+
+/* On wide viewports lift the TOC into a sticky right rail. The TOC stays
+ * itself; we just float it and constrain its height so long pages get a
+ * scrollable mini-map without growing the page. Mobile keeps the
+ * original inline block. */
+@media (min-width: 1200px) {
+  .toc {
+    float: right;
+    clear: right;
+    margin: 0 0 var(--ddp-space-3) var(--ddp-space-5);
+    width: 280px;
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}

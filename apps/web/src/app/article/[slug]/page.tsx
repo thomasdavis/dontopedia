@@ -19,6 +19,7 @@ import { ArticleTabs } from "@/components/ArticleTabs";
 import { ArticleTimeline } from "@/components/ArticleTimeline";
 import { AssertFact } from "@/components/AssertFact";
 import { ClaimsList, type SerializedClaim } from "@/components/ClaimsList";
+import { OtherFacts, type OtherFactRow } from "@/components/OtherFacts";
 import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
@@ -164,17 +165,50 @@ export default async function ArticlePage({
     // Technical
     programsIn: 90, usesTool: 91, prefersUsing: 92,
   };
-  const groups = rawGroups.sort((a, b) => {
+  const allGroups = rawGroups.sort((a, b) => {
     const oa = SECTION_ORDER[a.predicate] ?? 500;
     const ob = SECTION_ORDER[b.predicate] ?? 500;
     if (oa !== ob) return oa - ob;
     return b.statements.length - a.statements.length; // within same tier, most facts first
   });
+  // Three-tier predicate display:
+  //  - Featured: in SECTION_ORDER (identity, biography, etc.) — always full section.
+  //  - Major:    not featured, >= MAJOR_THRESHOLD statements — full section.
+  //  - Other:    long tail of mostly-singleton predicates — one compact table.
+  // This collapses the 2,000+ section render seen on chat-heavy subjects.
+  const MAJOR_THRESHOLD = 10;
+  const groups = allGroups.filter(
+    (g) =>
+      SECTION_ORDER[g.predicate] != null ||
+      g.statements.length >= MAJOR_THRESHOLD,
+  );
+  const otherGroups = allGroups.filter(
+    (g) =>
+      SECTION_ORDER[g.predicate] == null &&
+      g.statements.length < MAJOR_THRESHOLD,
+  );
   const contradictions = findContradictions(current);
   const conflictByPred = new Map(contradictions.map((c) => [c.predicate, c]));
   const label = preferredLabel(current, iri);
   const lede = preferredLede(current);
   const refs = buildRefs(current);
+
+  // Long-tail rows flattened for the OtherFacts compact view.
+  const otherRows: OtherFactRow[] = [];
+  for (const g of otherGroups) {
+    for (const stmt of g.statements) {
+      const objSlug = stmt.object_iri ? iriToSlug(stmt.object_iri) : null;
+      otherRows.push({
+        predicate:  g.predicate,
+        predLabel:  prettifyLabel("x:" + g.predicate),
+        objectIri:  stmt.object_iri ?? null,
+        objectSlug: objSlug,
+        objectText: formatObject(stmt),
+        ref:        refs.get(stmt.context) ?? null,
+        maturity:   stmt.maturity ?? 0,
+      });
+    }
+  }
 
   // Build retracted groups keyed by predicate.
   const retractedByPred = new Map<string, Statement[]>();
@@ -374,6 +408,39 @@ export default async function ArticlePage({
               </p>
             )}
 
+            {/* Stats strip — immediate at-a-glance counts so a reader
+                knows whether this is a stub or a thicket. */}
+            <div className={css.stats}>
+              <span className={css.stat}>
+                <strong>{current.length.toLocaleString()}</strong> facts
+              </span>
+              <span className={css.statSep}>·</span>
+              <span className={css.stat}>
+                <strong>{allGroups.length.toLocaleString()}</strong> predicates
+              </span>
+              <span className={css.statSep}>·</span>
+              <span className={css.stat}>
+                <strong>{refs.size.toLocaleString()}</strong> sources
+              </span>
+              {contradictions.length > 0 && (
+                <>
+                  <span className={css.statSep}>·</span>
+                  <span className={`${css.stat} ${css.statWarn}`}>
+                    <strong>{contradictions.length.toLocaleString()}</strong>{" "}
+                    in dispute
+                  </span>
+                </>
+              )}
+              {retracted.length > 0 && (
+                <>
+                  <span className={css.statSep}>·</span>
+                  <span className={css.stat}>
+                    <strong>{retracted.length.toLocaleString()}</strong> retracted
+                  </span>
+                </>
+              )}
+            </div>
+
             {/* Feature 2: Retracted toggle + maturity legend */}
             <div className={css.toolbar}>
               <RetractedToggleButton />
@@ -402,16 +469,25 @@ export default async function ArticlePage({
                       </a>
                     </li>
                   ))}
+                  {otherRows.length > 0 && (
+                    <li>
+                      <a href="#other-facts">
+                        <span className={css.tocNum}>{extraTocStart}</span>
+                        <span className={css.tocLabel}>Other facts</span>
+                        <span className={css.tocCount}>{otherRows.length}</span>
+                      </a>
+                    </li>
+                  )}
                   <li>
                     <a href="#timeline">
-                      <span className={css.tocNum}>{extraTocStart}</span>
+                      <span className={css.tocNum}>{extraTocStart + (otherRows.length > 0 ? 1 : 0)}</span>
                       <span className={css.tocLabel}>Timeline</span>
                     </a>
                   </li>
                   {refs.size > 0 && (
                     <li>
                       <a href="#references">
-                        <span className={css.tocNum}>{extraTocStart + 1}</span>
+                        <span className={css.tocNum}>{extraTocStart + (otherRows.length > 0 ? 2 : 1)}</span>
                         <span className={css.tocLabel}>References</span>
                         <span className={css.tocCount}>{refs.size}</span>
                       </a>
@@ -420,7 +496,7 @@ export default async function ArticlePage({
                   {hasSeeAlso && (
                     <li>
                       <a href="#see-also">
-                        <span className={css.tocNum}>{extraTocStart + 2}</span>
+                        <span className={css.tocNum}>{extraTocStart + (otherRows.length > 0 ? 3 : 2)}</span>
                         <span className={css.tocLabel}>See also</span>
                         <span className={css.tocCount}>{seeAlsoEntries.length}</span>
                       </a>
@@ -449,6 +525,20 @@ export default async function ArticlePage({
                     </PredicateSection>
                   );
                 })}
+
+                {otherRows.length > 0 && (
+                  <PredicateSection
+                    id="other-facts"
+                    title={`Other facts (${otherRows.length.toLocaleString()})`}
+                  >
+                    <p className={css.sectionNote}>
+                      The long tail: predicates that appear too rarely to
+                      warrant their own section. Filter or scroll to find
+                      a specific one. Each row links to its source.
+                    </p>
+                    <OtherFacts rows={otherRows} />
+                  </PredicateSection>
+                )}
 
                 <PredicateSection id="timeline" title="Timeline">
                   <p className={css.sectionNote}>
