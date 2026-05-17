@@ -225,6 +225,12 @@ export default async function ArticlePage({
   const label = preferredLabel(current, iri);
   const lede = preferredLede(current);
   const refs = buildRefs(current);
+  // How many of THIS article's facts come from each context. Used by
+  // ReferencesList to show "(45 facts)" alongside each source.
+  const ctxUsage = new Map<string, number>();
+  for (const r of current) {
+    ctxUsage.set(r.context, (ctxUsage.get(r.context) ?? 0) + 1);
+  }
 
   // Top-3 predicates teaser — gives a one-glance character of the
   // subject ("mostly messages, shared links, attachments"). Picked from
@@ -330,6 +336,9 @@ export default async function ArticlePage({
   let sourceContexts = new Map<string, { kind: string; mode: string; count: number }>();
   const sourceUrls = new Map<string, string>();
   const sourceNames = new Map<string, string>();
+  // Document(s) linked to a given context, populated by sourcesLookup
+  // (which follows statement->evidence_link->span->revision->document).
+  const sourceDetails = new Map<string, import("@donto/client").SourceDocument[]>();
   try {
     const srcCtxs = [...refs.keys()].filter(
       (ctx) => ctx.startsWith("ctx:src/") || ctx.startsWith("ctx:src-"),
@@ -342,6 +351,17 @@ export default async function ArticlePage({
       for (const c of ctxRes.contexts) {
         sourceContexts.set(c.context, { kind: c.kind, mode: c.mode, count: c.count });
       }
+    }
+    // Pull full provenance for every cited context — title, URL, body
+    // excerpt of the linked document(s), media type, creators, etc.
+    const allRefCtxs = [...refs.keys()];
+    if (allRefCtxs.length > 0) {
+      try {
+        const srcRes = await dpClient().sourcesLookup(allRefCtxs);
+        for (const row of srcRes.sources) {
+          sourceDetails.set(row.context, row.documents);
+        }
+      } catch { /* non-fatal */ }
     }
     await Promise.all(
       srcCtxs.map(async (c) => {
@@ -384,6 +404,9 @@ export default async function ArticlePage({
       url,
       localHref,
       kind:      sourceContexts.get(ctx)?.kind ?? null,
+      mode:      sourceContexts.get(ctx)?.mode ?? null,
+      count:     ctxUsage.get(ctx) ?? 0,
+      documents: sourceDetails.get(ctx) ?? [],
     };
   });
 
