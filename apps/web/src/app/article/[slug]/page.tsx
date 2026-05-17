@@ -251,13 +251,18 @@ export default async function ArticlePage({
   const sourceUrls = new Map<string, string>();
   const sourceNames = new Map<string, string>();
   try {
-    const ctxRes = await dpClient().contexts();
-    for (const c of ctxRes.contexts) {
-      sourceContexts.set(c.context, { kind: c.kind, mode: c.mode, count: c.count });
-    }
     const srcCtxs = [...refs.keys()].filter(
       (ctx) => ctx.startsWith("ctx:src/") || ctx.startsWith("ctx:src-"),
     );
+    // Targeted metadata for just the contexts this article references.
+    // /contexts (global) does a group-by over 39M statements and times
+    // out; /contexts/lookup is indexed and bounded by srcCtxs.length.
+    if (srcCtxs.length > 0) {
+      const ctxRes = await dpClient().contextsLookup(srcCtxs);
+      for (const c of ctxRes.contexts) {
+        sourceContexts.set(c.context, { kind: c.kind, mode: c.mode, count: c.count });
+      }
+    }
     await Promise.all(
       srcCtxs.map(async (c) => {
         try {
