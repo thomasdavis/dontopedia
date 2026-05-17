@@ -24,6 +24,7 @@ import { ActivitySpark } from "@/components/ActivitySpark";
 import { ReferencesList, type RefRow } from "@/components/ReferencesList";
 import { SectionFilter } from "@/components/SectionFilter";
 import { TocHighlighter } from "@/components/TocHighlighter";
+import { CitationPopovers, type CitationInfo } from "@/components/CitationPopovers";
 import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
@@ -691,6 +692,15 @@ export default async function ArticlePage({
           </div>
         </RetractedToggleProvider>
       </article>
+      <CitationPopovers
+        refs={refRows.map<CitationInfo>((r) => ({
+          num: r.num,
+          name: r.name,
+          domain: r.domain,
+          url: r.url,
+          kind: r.kind,
+        }))}
+      />
       <a
         href="#top"
         className={css.toTop}

@@ -1,0 +1,64 @@
+.pop {
+  position: fixed;
+  z-index: 200;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #c8ccd1;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  pointer-events: none;
+  animation: popIn 0.12s ease-out;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.num {
+  color: #54595d;
+  font-family: var(--ddp-font-mono);
+  font-size: 0.6875rem;
+}
+.name {
+  color: #202122;
+  font-weight: 500;
+  word-break: break-word;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.domain {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.6875rem;
+  color: #14866d;
+}
+.kind {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.6875rem;
+  color: #72777d;
+  padding: 0 4px;
+  border: 1px solid #eaecf0;
+  border-radius: 2px;
+}
+.url {
+  margin-top: 6px;
+  pointer-events: auto;
+}
+.url a {
+  color: #0645ad;
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+.url a:hover { text-decoration: underline; }
