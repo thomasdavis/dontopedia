@@ -22,6 +22,7 @@ import { ClaimsList, type SerializedClaim } from "@/components/ClaimsList";
 import { OtherFacts, type OtherFactRow } from "@/components/OtherFacts";
 import { ActivitySpark } from "@/components/ActivitySpark";
 import { ReferencesList, type RefRow } from "@/components/ReferencesList";
+import { SectionFilter } from "@/components/SectionFilter";
 import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
@@ -541,12 +542,14 @@ export default async function ArticlePage({
               </span>
             </div>
 
+            <SectionFilter />
+
             {toc.length > 0 && (
               <nav className={css.toc}>
                 <div className={css.tocTitle}>Contents</div>
                 <ol>
                   {toc.map((t, i) => (
-                    <li key={t.href}>
+                    <li key={t.href} data-toc-key={t.label.toLowerCase()}>
                       <a href={t.href}>
                         <span className={css.tocNum}>{i + 1}</span>
                         <span className={css.tocLabel}>{t.label}</span>
@@ -690,15 +693,22 @@ function PredicateSection({
   iri,
   conflict,
   children,
+  sectionKey,
 }: {
   id: string;
   title: string;
   iri?: string;
   conflict?: boolean;
   children: React.ReactNode;
+  /** Lowercase searchable key — picked up by the SectionFilter input. */
+  sectionKey?: string;
 }) {
   return (
-    <section id={id} className={css.section}>
+    <section
+      id={id}
+      className={css.section}
+      data-section-key={(sectionKey ?? title).toLowerCase()}
+    >
       <h2 className={css.h2}>
         <span className={css.h2Title}>
           <a href={`#${id}`} className={css.anchor}>
