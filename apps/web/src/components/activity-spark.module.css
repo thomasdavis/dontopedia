@@ -1,0 +1,28 @@
+.spark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding-left: 12px;
+  border-left: 1px solid #eaecf0;
+}
+.bar {
+  fill: #0645ad;
+}
+.range {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.6875rem;
+  color: #54595d;
+  white-space: nowrap;
+}
+
+/* Hide spark on narrow screens where the stats strip wraps; saves
+ * crowding the line. */
+@media (max-width: 720px) {
+  .spark { display: none; }
+}
+
+.axisHint {
+  color: #a2a9b1;
+  font-style: italic;
+}

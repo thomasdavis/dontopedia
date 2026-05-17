@@ -20,6 +20,7 @@ import { ArticleTimeline } from "@/components/ArticleTimeline";
 import { AssertFact } from "@/components/AssertFact";
 import { ClaimsList, type SerializedClaim } from "@/components/ClaimsList";
 import { OtherFacts, type OtherFactRow } from "@/components/OtherFacts";
+import { ActivitySpark } from "@/components/ActivitySpark";
 import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
@@ -187,11 +188,52 @@ export default async function ArticlePage({
       SECTION_ORDER[g.predicate] == null &&
       g.statements.length < MAJOR_THRESHOLD,
   );
+  // Detect that the history call hit its limit so we can render an
+  // honest "5,000+ facts" instead of pretending we know the total.
+  const HISTORY_LIMIT = 5000;
+  const truncated = rows.length >= HISTORY_LIMIT;
+
+  // Facts-per-year buckets for the activity sparkline. Prefer valid_time
+  // (when the world said it held). For subjects with no valid_time
+  // (chat-style data), fall back to tx_time (ingestion) so the spark
+  // still shows something — labelled accordingly in the title attr.
+  const validYearMap = new Map<number, number>();
+  const txYearMap = new Map<number, number>();
+  for (const r of current) {
+    const vlo = r.valid_lo;
+    if (vlo) {
+      const y = new Date(vlo).getUTCFullYear();
+      if (Number.isFinite(y)) validYearMap.set(y, (validYearMap.get(y) ?? 0) + 1);
+    }
+    const tlo = r.tx_lo;
+    if (tlo) {
+      const y = new Date(tlo).getUTCFullYear();
+      if (Number.isFinite(y)) txYearMap.set(y, (txYearMap.get(y) ?? 0) + 1);
+    }
+  }
+  const useValid = validYearMap.size >= 2;
+  const yearMap = useValid ? validYearMap : txYearMap;
+  const yearCounts = [...yearMap.entries()].map(([year, count]) => ({ year, count }));
+  const yearAxis: "valid" | "tx" = useValid ? "valid" : "tx";
+
   const contradictions = findContradictions(current);
   const conflictByPred = new Map(contradictions.map((c) => [c.predicate, c]));
   const label = preferredLabel(current, iri);
   const lede = preferredLede(current);
   const refs = buildRefs(current);
+
+  // Top-3 predicates teaser — gives a one-glance character of the
+  // subject ("mostly messages, shared links, attachments"). Picked from
+  // allGroups (already sorted desc by count within tier; we re-sort
+  // strictly by count for this strip).
+  const topPredicates = [...allGroups]
+    .sort((a, b) => b.statements.length - a.statements.length)
+    .slice(0, 3)
+    .map((g) => ({
+      predicate: g.predicate,
+      label: prettifyLabel("x:" + g.predicate),
+      count: g.statements.length,
+    }));
 
   // Long-tail rows flattened for the OtherFacts compact view.
   const otherRows: OtherFactRow[] = [];
@@ -412,7 +454,11 @@ export default async function ArticlePage({
                 knows whether this is a stub or a thicket. */}
             <div className={css.stats}>
               <span className={css.stat}>
-                <strong>{current.length.toLocaleString()}</strong> facts
+                <strong>
+                  {current.length.toLocaleString()}
+                  {truncated ? "+" : ""}
+                </strong>{" "}
+                facts
               </span>
               <span className={css.statSep}>·</span>
               <span className={css.stat}>
@@ -439,7 +485,23 @@ export default async function ArticlePage({
                   </span>
                 </>
               )}
+              <ActivitySpark yearCounts={yearCounts} axis={yearAxis} />
             </div>
+
+            {topPredicates.length > 0 && allGroups.length > 3 && (
+              <p className={css.topics}>
+                <span className={css.topicsLabel}>Mostly:</span>
+                {topPredicates.map((tp, i) => (
+                  <span key={tp.predicate} className={css.topic}>
+                    <a href={`#pred-${encodeURIComponent(tp.predicate)}`}>
+                      {tp.label.toLowerCase()}
+                    </a>
+                    <span className={css.topicCount}>({tp.count.toLocaleString()})</span>
+                    {i < topPredicates.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </p>
+            )}
 
             {/* Feature 2: Retracted toggle + maturity legend */}
             <div className={css.toolbar}>

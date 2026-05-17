@@ -491,3 +491,25 @@
     overflow-y: auto;
   }
 }
+
+.topics {
+  margin: 4px 0 var(--ddp-space-2);
+  font-size: 0.875rem;
+  color: #54595d;
+}
+.topicsLabel {
+  font-weight: 600;
+  color: #54595d;
+  margin-right: 6px;
+}
+.topic a {
+  color: #0645ad;
+  text-decoration: none;
+}
+.topic a:hover { text-decoration: underline; }
+.topicCount {
+  color: #72777d;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  margin-left: 4px;
+}
