@@ -535,13 +535,18 @@ export default async function ArticlePage({
             {/* Feature 2: Retracted toggle + maturity legend */}
             <div className={css.toolbar}>
               <RetractedToggleButton />
-              <span className={css.maturityLegend}>
-                <span className={css.legendDot} data-maturity="0" /> raw
-                <span className={css.legendDot} data-maturity="1" /> canonical
-                <span className={css.legendDot} data-maturity="2" /> shape-checked
-                <span className={css.legendDot} data-maturity="3" /> rule-derived
-                <span className={css.legendDot} data-maturity="4" /> certified
-              </span>
+              <details className={css.maturityDetails}>
+                <summary className={css.maturitySummary}>
+                  Maturity scale
+                </summary>
+                <span className={css.maturityLegend}>
+                  <span className={css.legendDot} data-maturity="0" /> raw
+                  <span className={css.legendDot} data-maturity="1" /> canonical
+                  <span className={css.legendDot} data-maturity="2" /> shape-checked
+                  <span className={css.legendDot} data-maturity="3" /> rule-derived
+                  <span className={css.legendDot} data-maturity="4" /> certified
+                </span>
+              </details>
             </div>
 
             <SectionFilter />
@@ -609,6 +614,7 @@ export default async function ArticlePage({
                       id={`pred-${encodeURIComponent(g.predicate)}`}
                       title={prettifyLabel("x:" + g.predicate)}
                       iri={g.predicate}
+                      sectionKey={`${prettifyLabel("x:" + g.predicate)} ${g.predicate}`}
                       conflict={conflictByPred.has(g.predicate)}
                     >
                       <ClaimsList

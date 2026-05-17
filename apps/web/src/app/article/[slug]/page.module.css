@@ -583,3 +583,29 @@
     background: #fff;
   }
 }
+
+.maturityDetails {
+  display: inline-block;
+  font-size: 0.8125rem;
+  color: #54595d;
+}
+.maturitySummary {
+  cursor: pointer;
+  color: #0645ad;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.maturitySummary::-webkit-details-marker { display: none; }
+.maturitySummary::before {
+  content: "▸";
+  font-size: 0.6875rem;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.maturityDetails[open] .maturitySummary::before { transform: rotate(90deg); }
+.maturityDetails[open] .maturityLegend {
+  display: inline-flex;
+  margin-left: 12px;
+}
