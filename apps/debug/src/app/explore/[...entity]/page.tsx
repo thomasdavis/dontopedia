@@ -7,12 +7,15 @@ import type { EChartsOption } from "echarts";
 
 const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://genes.apexpots.com";
+const API = process.env.NEXT_PUBLIC_API_URL || "";
 
 export default function ExplorePage() {
   const params = useParams();
   const router = useRouter();
-  const entity = Array.isArray(params.entity) ? params.entity.join("/") : params.entity || "";
+  const rawEntity = Array.isArray(params.entity) ? params.entity.join("/") : params.entity || "";
+  const entity = (() => {
+    try { return decodeURIComponent(rawEntity); } catch { return rawEntity; }
+  })();
   const [data, setData] = useState<any>(null);
   const [search, setSearch] = useState("");
 
@@ -107,21 +110,36 @@ export default function ExplorePage() {
 
   return (
     <div style={{ padding: 20, maxWidth: 1600, margin: "0 auto" }}>
-      <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#f0f6fc", margin: 0 }}>{entity}</h1>
-        <span style={{ color: "#8b949e", fontSize: 13 }}>
-          {data.total_outgoing} outgoing &middot; {data.total_incoming} incoming &middot; {matTotal} total facts
-        </span>
+      <div style={{ display: "flex", gap: 16, alignItems: "baseline", marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Entity</div>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: "#f0f6fc", margin: 0, textTransform: "capitalize", letterSpacing: -0.3 }}>
+            {entity.replace(/^[^:]+:/, "").replace(/[-_]/g, " ")}
+          </h1>
+          <code style={{ fontSize: 11, color: "#8b949e", fontFamily: "ui-monospace, monospace" }}>{entity}</code>
+        </div>
         <span style={{ flex: 1 }} />
+        <span style={{ color: "#8b949e", fontSize: 12, display: "flex", gap: 14 }}>
+          <span><strong style={{ color: "#c9d1d9", fontSize: 16 }}>{data.total_outgoing ?? 0}</strong> outgoing</span>
+          <span><strong style={{ color: "#c9d1d9", fontSize: 16 }}>{data.total_incoming ?? 0}</strong> incoming</span>
+          <span><strong style={{ color: "#c9d1d9", fontSize: 16 }}>{matTotal}</strong> total</span>
+        </span>
         <input
           type="text"
-          placeholder="Jump to entity..."
+          placeholder="Jump to entity (e.g. ex:cooktown)…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && search) navigate(search); }}
-          style={{ background: "#21262d", border: "1px solid #30363d", color: "#c9d1d9", padding: "6px 12px", borderRadius: 6, fontSize: 13, width: 250 }}
+          style={{ background: "#0d1117", border: "1px solid #30363d", color: "#c9d1d9", padding: "8px 12px", borderRadius: 6, fontSize: 12, width: 260, fontFamily: "ui-monospace, monospace" }}
         />
       </div>
+
+      {(data.total_outgoing ?? 0) === 0 && (data.total_incoming ?? 0) === 0 && (
+        <div style={{ padding: "20px 24px", background: "#161b22", border: "1px solid #30363d", borderRadius: 10, marginBottom: 16, color: "#8b949e", fontSize: 13 }}>
+          No facts found about <code style={{ color: "#c9d1d9" }}>{entity}</code> yet.
+          {" "}<a href="/try" style={{ color: "#58a6ff", textDecoration: "none" }}>Extract some text that mentions it →</a>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 }}>
         <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 8, padding: 16 }}>

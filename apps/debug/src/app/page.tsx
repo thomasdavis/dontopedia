@@ -1,307 +1,166 @@
-"use client";
+import Link from "next/link";
 
-import { useEffect, useState, useCallback } from "react";
+export const revalidate = 60;
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://136.114.118.108:8000";
-
-interface Job {
-  id: string;
-  status: string;
-  context?: string;
-  model?: string;
-  text_length?: number;
-  facts_extracted?: number;
-  statements_ingested?: number;
-  tiers?: Record<string, number>;
-  usage?: { cost?: number; total_tokens?: number };
-  llm_ms?: number;
-  ingest_ms?: number;
-  total_ms?: number;
-  error?: string;
-  created_at?: number;
+interface GraphStats {
+  total_statements?: number;
+  total_contexts?: number;
+  total_predicates?: number;
+  top_predicates?: { predicate: string; count: number }[];
 }
 
-interface JobsResponse {
-  jobs: Job[];
-  total: number;
-  summary: Record<string, number>;
+interface JobsSummary {
+  total?: number;
+  summary?: Record<string, number>;
+  jobs?: { facts_extracted?: number; usage?: { cost?: number } }[];
 }
 
-interface FactRow {
-  subject: string;
-  predicate: string;
-  object: string | null;
-  maturity: number;
-  polarity: string;
-  tier?: number;
+const INTERNAL = process.env.INTERNAL_API_URL || "http://127.0.0.1:8000";
+
+async function safeJson<T>(path: string): Promise<T | null> {
+  try {
+    const r = await fetch(INTERNAL + path, { next: { revalidate: 60 } });
+    if (!r.ok) return null;
+    return (await r.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
-interface SourceData {
-  context: string;
-  source: string | null;
-  model?: string;
+function fmt(n: number) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
+  return String(n);
 }
 
-function fmt(ms?: number) {
-  if (!ms) return "-";
-  if (ms < 1000) return ms + "ms";
-  if (ms < 60000) return (ms / 1000).toFixed(1) + "s";
-  return (ms / 60000).toFixed(1) + "m";
-}
+export default async function Home() {
+  const [graph, jobs] = await Promise.all([
+    safeJson<GraphStats>("/graph/stats"),
+    safeJson<JobsSummary>("/jobs?status=completed&limit=200"),
+  ]);
 
-function ago(ts?: number) {
-  if (!ts) return "-";
-  const s = Math.floor(Date.now() / 1000 - ts);
-  if (s < 60) return s + "s ago";
-  if (s < 3600) return Math.floor(s / 60) + "m ago";
-  return Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m ago";
-}
-
-function Badge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    queued: "#8b949e",
-    extracting: "#58a6ff",
-    ingesting: "#d29922",
-    completed: "#3fb950",
-    failed: "#f85149",
-  };
-  return (
-    <span
-      style={{
-        padding: "2px 8px",
-        borderRadius: 12,
-        fontSize: 11,
-        fontWeight: 600,
-        color: colors[status] || "#8b949e",
-        border: `1px solid ${colors[status] || "#30363d"}`,
-        background: "#161b22",
-      }}
-    >
-      {status}
-    </span>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
-  return (
-    <div style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 8, padding: "12px 16px", minWidth: 120 }}>
-      <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, marginTop: 2, color: color || "#c9d1d9" }}>{value}</div>
-    </div>
-  );
-}
-
-function ExpandedRow({ job }: { job: Job }) {
-  const [facts, setFacts] = useState<FactRow[]>([]);
-  const [source, setSource] = useState<SourceData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (job.status !== "completed" || !job.context) {
-      setLoading(false);
-      return;
-    }
-    Promise.all([
-      fetch(`${API}/jobs/${encodeURIComponent(job.id)}/facts?limit=1000`).then((r) => r.json()),
-      fetch(`${API}/jobs/${encodeURIComponent(job.id)}/source`).then((r) => r.json()),
-    ])
-      .then(([factsData, sourceData]) => {
-        setFacts(factsData.facts || []);
-        setSource(sourceData);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [job.id, job.status, job.context]);
-
-  if (loading) return <div style={{ padding: 16, color: "#8b949e" }}>Loading...</div>;
+  const totalFacts = (jobs?.jobs ?? []).reduce((a, j) => a + (j.facts_extracted || 0), 0);
+  const totalCost = (jobs?.jobs ?? []).reduce((a, j) => a + (j.usage?.cost || 0), 0);
 
   return (
-    <div style={{ padding: 16, background: "#0d1117", borderTop: "1px solid #30363d" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <div>
-          <h4 style={{ margin: "0 0 8px", fontSize: 13, color: "#f0f6fc" }}>Job Metadata</h4>
-          <pre style={{ fontSize: 11, background: "#161b22", padding: 8, borderRadius: 4, overflow: "auto", maxHeight: 120 }}>
-            {JSON.stringify(job, null, 2)}
-          </pre>
+    <main style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 80px" }}>
+      <section style={{ marginBottom: 64 }}>
+        <div style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: "#161b22", border: "1px solid #30363d", fontSize: 11, color: "#8b949e", letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 18 }}>
+          live on {graph?.total_statements ? fmt(graph.total_statements) : "—"} statements
         </div>
-        {source?.source && (
-          <div>
-            <h4 style={{ margin: "0 0 8px", fontSize: 13, color: "#f0f6fc" }}>
-              Source Text <span style={{ fontSize: 11, color: "#8b949e", fontWeight: 400 }}>({(source.source.length / 1000).toFixed(1)}k chars)</span>
-            </h4>
-            <pre style={{ fontSize: 11, background: "#161b22", padding: 8, borderRadius: 4, overflow: "auto", maxHeight: 200, whiteSpace: "pre-wrap", color: "#8b949e" }}>
-              {source.source.substring(0, 5000)}
-              {source.source.length > 5000 ? "\n... (truncated)" : ""}
-            </pre>
-          </div>
-        )}
-      </div>
-
-      {facts.length > 0 && (
-        <div>
-          <h4 style={{ margin: "0 0 8px", fontSize: 13, color: "#f0f6fc" }}>
-            Extracted Facts <span style={{ fontSize: 11, color: "#8b949e", fontWeight: 400 }}>({facts.length} statements)</span>
-          </h4>
-          <div style={{ maxHeight: 400, overflow: "auto", borderRadius: 4, border: "1px solid #30363d" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: "#21262d" }}>
-                  <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Subject</th>
-                  <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Predicate</th>
-                  <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Object</th>
-                  <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Tier</th>
-                  <th style={{ padding: "6px 8px", textAlign: "left", color: "#8b949e", fontSize: 10 }}>Mat</th>
-                </tr>
-              </thead>
-              <tbody>
-                {facts.slice(0, 1000).map((f, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #21262d" }}>
-                    <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11 }}>{f.subject}</td>
-                    <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, color: "#58a6ff" }}>{f.predicate}</td>
-                    <td style={{ padding: "4px 8px", fontFamily: "monospace", fontSize: 11, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: f.object ? "#c9d1d9" : "#484f58" }}>{f.object || "—"}</td>
-                    <td style={{ padding: "4px 8px", fontSize: 11, color: "#8b949e" }}>{f.tier ? `T${f.tier}` : "—"}</td>
-                    <td style={{ padding: "4px 8px", fontSize: 11 }}>L{f.maturity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <h1 style={{ fontSize: 56, lineHeight: 1.05, margin: 0, fontWeight: 700, letterSpacing: -1.5, color: "#f0f6fc" }}>
+          The evidence operating system<br />
+          <span style={{ color: "#8b949e" }}>for contested knowledge.</span>
+        </h1>
+        <p style={{ fontSize: 18, lineHeight: 1.55, color: "#8b949e", maxWidth: 720, marginTop: 22 }}>
+          Donto is a bitemporal, paraconsistent quad store. It stores evidence-backed claims
+          under contexts, preserves contradictions as data, and tracks both world time and
+          system time. Paste any text and watch it become structured, queryable claims.
+        </p>
+        <div style={{ display: "flex", gap: 12, marginTop: 30, flexWrap: "wrap" }}>
+          <Link href="/try" style={{ background: "#238636", border: "1px solid #2ea043", color: "#fff", padding: "12px 22px", borderRadius: 8, fontSize: 15, fontWeight: 600, textDecoration: "none" }}>
+            Try the pipeline →
+          </Link>
+          <Link href="/queue" style={{ background: "#21262d", border: "1px solid #30363d", color: "#c9d1d9", padding: "12px 22px", borderRadius: 8, fontSize: 15, fontWeight: 500, textDecoration: "none" }}>
+            See the queue
+          </Link>
+          <Link href="/explore/ex:annie-davis" style={{ background: "#21262d", border: "1px solid #30363d", color: "#c9d1d9", padding: "12px 22px", borderRadius: 8, fontSize: 15, fontWeight: 500, textDecoration: "none" }}>
+            Explore an entity
+          </Link>
         </div>
-      )}
+      </section>
 
-      {job.status === "failed" && job.error && (
-        <div style={{ marginTop: 12, padding: 8, background: "#3d0e0e", borderRadius: 4, color: "#f85149", fontSize: 12 }}>
-          {job.error}
-        </div>
-      )}
-    </div>
-  );
-}
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 64 }}>
+        <StatCard label="Statements" value={graph?.total_statements != null ? fmt(graph.total_statements) : "—"} sub="all-time, append-only" />
+        <StatCard label="Contexts" value={graph?.total_contexts != null ? fmt(graph.total_contexts) : "—"} sub="scoped knowledge slices" />
+        <StatCard label="Predicates" value={graph?.total_predicates != null ? fmt(graph.total_predicates) : "—"} sub="freely minted, alignable" />
+        <StatCard label="Jobs completed" value={jobs?.summary?.completed != null ? fmt(jobs.summary.completed) : "—"} sub={totalFacts ? `${fmt(totalFacts)} facts · ~$${totalCost.toFixed(2)}` : "extraction pipeline"} />
+      </section>
 
-export default function QueuePage() {
-  const [data, setData] = useState<JobsResponse | null>(null);
-  const [filter, setFilter] = useState("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+      <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 64 }}>
+        <Card title="How the pipeline runs" href="/try">
+          <Step n={1} title="LLM extraction" body="OpenRouter (Grok 4.3) reads your text and returns 8-tier facts: surface, relational, opinion, epistemic, rhetorical, presupposition, structural, philosophical." />
+          <Step n={2} title="Ingest" body="Facts batched into the donto Postgres extension via dontosrv /assert/batch — content-hash deduplicated, bitemporal." />
+          <Step n={3} title="Predicate alignment" body="Freely-minted predicates are folded into the canonical closure index so equivalent claims unify under shadow queries." />
+          <Step n={4} title="Entity resolution" body="Subject IRIs are mapped to canonical forms when an entity-resolution policy fires." />
+        </Card>
 
-  const refresh = useCallback(async () => {
-    try {
-      const url = filter === "all" ? `${API}/jobs` : `${API}/jobs?status=${filter}`;
-      const r = await fetch(url);
-      const d = await r.json();
-      setData(d);
-    } catch {}
-  }, [filter]);
-
-  useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 5000);
-    return () => clearInterval(interval);
-  }, [refresh]);
-
-  if (!data) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>;
-
-  const jobs = data.jobs;
-  const s = data.summary || {};
-  const totalFacts = data.jobs.reduce((a, j) => a + (j.facts_extracted || 0), 0);
-  const totalCost = data.jobs.reduce((a, j) => a + (j.usage?.cost || 0), 0);
-
-  return (
-    <div style={{ padding: 20, maxWidth: 1600, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#f0f6fc", margin: 0 }}>Extraction Queue</h1>
-        <a href="/firehose" style={{ color: "#58a6ff", fontSize: 13, textDecoration: "none" }}>Firehose &rarr;</a>
-      </div>
-
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <StatCard label="Total" value={data.total} />
-        <StatCard label="Completed" value={s.completed || 0} color="#3fb950" />
-        <StatCard label="Active" value={(s.extracting || 0) + (s.ingesting || 0) + (s.queued || 0)} color="#58a6ff" />
-        <StatCard label="Failed" value={s.failed || 0} color="#f85149" />
-        <StatCard label="Facts" value={totalFacts.toLocaleString()} color="#bc8cff" />
-        <StatCard label="Cost" value={`$${totalCost.toFixed(3)}`} color="#d29922" />
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {["all", "queued", "extracting", "ingesting", "completed", "failed"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              background: filter === f ? "#1f6feb" : "#21262d",
-              border: `1px solid ${filter === f ? "#1f6feb" : "#30363d"}`,
-              color: filter === f ? "#fff" : "#c9d1d9",
-              padding: "6px 12px",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontSize: 13,
-              textTransform: "capitalize",
-            }}
-          >
-            {f} {f !== "all" && s[f] ? `(${s[f]})` : ""}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 8, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "#21262d" }}>
-              <th style={th}>Status</th>
-              <th style={th}>Context</th>
-              <th style={th}>Facts</th>
-              <th style={th}>Cost</th>
-              <th style={th}>LLM</th>
-              <th style={th}>Total</th>
-              <th style={th}>Tiers</th>
-              <th style={th}>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((j) => (
-              <>
-                <tr
-                  key={j.id}
-                  onClick={() => setExpandedId(expandedId === j.id ? null : j.id)}
-                  style={{ cursor: "pointer", borderBottom: "1px solid #21262d" }}
-                  onMouseOver={(e) => (e.currentTarget.style.background = "#1c2128")}
-                  onMouseOut={(e) => (e.currentTarget.style.background = "")}
-                >
-                  <td style={td}><Badge status={j.status} /></td>
-                  <td style={{ ...td, fontFamily: "monospace", fontSize: 11, maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.context}>{j.context?.replace("ctx:genes/", "") || j.id}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{j.facts_extracted || "-"}</td>
-                  <td style={{ ...td, fontFamily: "monospace", color: "#d29922", fontSize: 11 }}>{j.usage?.cost ? `$${j.usage.cost.toFixed(4)}` : "-"}</td>
-                  <td style={{ ...td, color: "#8b949e", fontSize: 11 }}>{fmt(j.llm_ms)}</td>
-                  <td style={{ ...td, color: "#8b949e", fontSize: 11 }}>{fmt(j.total_ms)}</td>
-                  <td style={td}>
-                    <div style={{ display: "flex", gap: 2 }}>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
-                        const v = j.tiers?.[`t${i}`] || 0;
-                        return (
-                          <span key={i} style={{ background: v ? "#0d2847" : "#21262d", color: v ? "#58a6ff" : "#8b949e", padding: "1px 3px", borderRadius: 3, fontSize: 9, fontFamily: "monospace" }} title={`T${i}: ${v}`}>
-                            {v || ""}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td style={{ ...td, color: "#8b949e", fontSize: 11 }}>{ago(j.created_at)}</td>
-                </tr>
-                {expandedId === j.id && (
-                  <tr key={j.id + "-detail"}>
-                    <td colSpan={8} style={{ padding: 0 }}>
-                      <ExpandedRow job={j} />
-                    </td>
-                  </tr>
-                )}
-              </>
+        <Card title="Top predicates right now" href="/predicates">
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {(graph?.top_predicates ?? []).slice(0, 10).map(p => (
+              <li key={p.predicate} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #21262d", fontSize: 13 }}>
+                <code style={{ color: "#58a6ff", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>{p.predicate}</code>
+                <span style={{ color: "#8b949e", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>{fmt(p.count)}</span>
+              </li>
             ))}
-          </tbody>
-        </table>
-        {jobs.length === 0 && <div style={{ padding: 40, textAlign: "center", color: "#8b949e" }}>No jobs matching filter</div>}
+            {!graph?.top_predicates && <li style={{ color: "#484f58", fontSize: 13, padding: "8px 0" }}>—</li>}
+          </ul>
+        </Card>
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 22, color: "#f0f6fc", marginBottom: 18, fontWeight: 600 }}>Explore</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+          <NavTile href="/try" title="Try" body="Paste text, watch the pipeline run live." accent="#238636" />
+          <NavTile href="/queue" title="Queue" body="Every extraction job, with full breakdown." />
+          <NavTile href="/firehose" title="Firehose" body="Live stream of every assert and audit event." />
+          <NavTile href="/pulse" title="Pulse" body="System-wide ingest and query throughput." />
+          <NavTile href="/predicates" title="Predicates" body="All predicates, ranked by statement count." />
+          <NavTile href="/report" title="Report" body="Daily summary of growth, contradictions, alignment." />
+          <NavTile href="/explore/ex:captain-james-cook" title="Explore" body="Walk the graph from any entity." />
+        </div>
+      </section>
+
+      <footer style={{ marginTop: 80, paddingTop: 24, borderTop: "1px solid #21262d", display: "flex", justifyContent: "space-between", color: "#484f58", fontSize: 12, flexWrap: "wrap", gap: 8 }}>
+        <span>donto · bitemporal paraconsistent quad store · {graph?.total_statements ? fmt(graph.total_statements) + " statements" : "running"}</span>
+        <span>
+          <Link href="/openapi.json" style={{ color: "#484f58", textDecoration: "none", marginRight: 14 }}>OpenAPI</Link>
+          <Link href="/docs" style={{ color: "#484f58", textDecoration: "none" }}>API docs</Link>
+        </span>
+      </footer>
+    </main>
+  );
+}
+
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 10, padding: "16px 18px" }}>
+      <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: "#f0f6fc", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: "#484f58", marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Card({ title, href, children }: { title: string; href?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 10, padding: 22 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+        <h3 style={{ fontSize: 14, color: "#f0f6fc", margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6 }}>{title}</h3>
+        {href && <Link href={href} style={{ color: "#58a6ff", fontSize: 12, textDecoration: "none" }}>open →</Link>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Step({ n, title, body }: { n: number; title: string; body: string }) {
+  return (
+    <div style={{ display: "flex", gap: 14, padding: "10px 0", borderBottom: "1px solid #21262d" }}>
+      <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#0d1117", border: "1px solid #30363d", color: "#8b949e", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{n}</div>
+      <div>
+        <div style={{ fontSize: 13, color: "#f0f6fc", fontWeight: 600 }}>{title}</div>
+        <div style={{ fontSize: 12, color: "#8b949e", marginTop: 2, lineHeight: 1.5 }}>{body}</div>
       </div>
     </div>
   );
 }
 
-const th: React.CSSProperties = { padding: "8px 12px", textAlign: "left", fontSize: 11, color: "#8b949e", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "1px solid #30363d" };
-const td: React.CSSProperties = { padding: "8px 12px", fontSize: 13, verticalAlign: "middle" };
+function NavTile({ href, title, body, accent }: { href: string; title: string; body: string; accent?: string }) {
+  return (
+    <Link href={href} style={{ display: "block", background: "#161b22", border: "1px solid " + (accent || "#30363d"), borderRadius: 10, padding: "18px 20px", textDecoration: "none", color: "inherit" }}>
+      <div style={{ fontSize: 16, color: accent || "#f0f6fc", fontWeight: 600, marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.5 }}>{body}</div>
+    </Link>
+  );
+}

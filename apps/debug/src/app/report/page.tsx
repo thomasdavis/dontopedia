@@ -6,7 +6,7 @@ import type { EChartsOption } from "echarts";
 
 const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://genes.apexpots.com";
+const API = process.env.NEXT_PUBLIC_API_URL || "";
 
 export default function ReportPage() {
   const [entity, setEntity] = useState("ex:captain-james-cook");

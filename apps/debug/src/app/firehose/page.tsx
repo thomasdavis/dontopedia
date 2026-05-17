@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://136.114.118.108:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "";
 
 interface AuditEvent {
   audit_id: number;

@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/", label: "Queue" },
+  { href: "/queue", label: "Queue" },
+  { href: "/try", label: "Try" },
   { href: "/firehose", label: "Firehose" },
   { href: "/pulse", label: "Pulse" },
   { href: "/predicates", label: "Predicates" },
@@ -12,6 +13,7 @@ const links = [
 
 export default function Nav() {
   const path = usePathname();
+  const isActive = (href: string) => path === href || (path === href);
   return (
     <nav style={{ display: "flex", gap: 16, padding: "12px 20px", borderBottom: "1px solid #21262d", background: "#0d1117" }}>
       <span style={{ fontWeight: 700, color: "#f0f6fc", fontSize: 14, marginRight: 8 }}>donto</span>
@@ -20,11 +22,11 @@ export default function Nav() {
           key={l.href}
           href={l.href}
           style={{
-            color: path === l.href ? "#58a6ff" : "#8b949e",
+            color: isActive(l.href) ? "#58a6ff" : "#8b949e",
             textDecoration: "none",
             fontSize: 13,
-            fontWeight: path === l.href ? 600 : 400,
-            borderBottom: path === l.href ? "2px solid #58a6ff" : "2px solid transparent",
+            fontWeight: isActive(l.href) ? 600 : 400,
+            borderBottom: isActive(l.href) ? "2px solid #58a6ff" : "2px solid transparent",
             paddingBottom: 4,
           }}
         >
