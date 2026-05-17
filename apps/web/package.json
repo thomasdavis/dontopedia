@@ -14,7 +14,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
     "@base-ui-components/react": "^1.0.0-alpha.20",
-    "@donto/client": "file:../../../donto/packages/donto-client",
+    "@donto/client": "file:../../../donto/packages/client-ts",
     "@dontopedia/extraction": "workspace:*",
     "@dontopedia/sdk": "workspace:*",
     "@dontopedia/ui": "workspace:*",

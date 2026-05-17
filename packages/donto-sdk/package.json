@@ -14,7 +14,7 @@
     "build": "echo '(source-only package, nothing to build)'"
   },
   "dependencies": {
-    "@donto/client": "file:../../../donto/packages/donto-client"
+    "@donto/client": "file:../../../donto/packages/client-ts"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
