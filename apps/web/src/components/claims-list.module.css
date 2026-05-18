@@ -113,3 +113,21 @@
   background: #f8f9fa;
   text-decoration: underline;
 }
+
+.sourceBadge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #14866d;
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 6px;
+  text-decoration: none;
+  vertical-align: 1px;
+}
+a.sourceBadge:hover {
+  background: #0f5f4d;
+}

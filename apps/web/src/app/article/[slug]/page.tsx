@@ -95,12 +95,22 @@ function buildRefs(rows: Statement[]): Map<string, number> {
 function serializeClaim(
   stmt: Statement,
   refs: Map<string, number>,
+  evidence: Map<string, import("@donto/client").StatementEvidence>,
 ): SerializedClaim {
+  const ev = evidence.get(stmt.statement_id);
   return {
     statementId: stmt.statement_id,
     polarity: stmt.polarity,
     kind: classifyContext(stmt.context),
     maturity: stmt.maturity,
+    sourceText: ev
+      ? {
+          docIri:    ev.doc_iri,
+          docLabel:  ev.doc_label,
+          sourceUrl: ev.source_url,
+          bodySize:  ev.body_size,
+        }
+      : null,
     maturityLabel: MATURITY_LABELS[stmt.maturity] ?? "unknown",
     objectIri: stmt.object_iri ?? null,
     objectSlug: stmt.object_iri ? iriToSlug(stmt.object_iri) : null,
@@ -339,6 +349,9 @@ export default async function ArticlePage({
   // Document(s) linked to a given context, populated by sourcesLookup
   // (which follows statement->evidence_link->span->revision->document).
   const sourceDetails = new Map<string, import("@donto/client").SourceDocument[]>();
+  // Per-statement evidence: statement_id -> first document linked via
+  // donto_evidence_link. Used to render a "source text" badge on facts.
+  const statementEvidence = new Map<string, import("@donto/client").StatementEvidence>();
   try {
     const srcCtxs = [...refs.keys()].filter(
       (ctx) => ctx.startsWith("ctx:src/") || ctx.startsWith("ctx:src-"),
@@ -360,6 +373,18 @@ export default async function ArticlePage({
         const srcRes = await dpClient().sourcesLookup(allRefCtxs);
         for (const row of srcRes.sources) {
           sourceDetails.set(row.context, row.documents);
+        }
+      } catch { /* non-fatal */ }
+    }
+
+    // Per-statement: which facts have document-backed evidence (so we
+    // can render a "source text" badge on each claim row).
+    const stmtIds = current.map((r) => r.statement_id);
+    if (stmtIds.length > 0) {
+      try {
+        const evRes = await dpClient().statementsEvidence(stmtIds);
+        for (const e of evRes.evidence) {
+          statementEvidence.set(e.statement_id, e);
         }
       } catch { /* non-fatal */ }
     }
@@ -642,8 +667,8 @@ export default async function ArticlePage({
                       conflict={conflictByPred.has(g.predicate)}
                     >
                       <ClaimsList
-                        current={g.statements.map((s) => serializeClaim(s, refs))}
-                        retracted={retractedForPred.map((s) => serializeClaim(s, refs))}
+                        current={g.statements.map((s) => serializeClaim(s, refs, statementEvidence))}
+                        retracted={retractedForPred.map((s) => serializeClaim(s, refs, statementEvidence))}
                       />
                     </PredicateSection>
                   );

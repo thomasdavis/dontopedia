@@ -102,6 +102,9 @@ function ClaimItem({
           </a>
         </sup>
       )}
+      {claim.sourceText && (
+        <SourceTextBadge st={claim.sourceText} />
+      )}
       <ReactionCounts statementId={claim.statementId} />
       <span className={css.claimMeta}>
         {claim.validRange}
@@ -136,4 +139,38 @@ export interface SerializedClaim {
   validRange: string;
   ref: number | null;
   txHi: string | null;
+  /** If non-null, this fact's evidence chain reaches a document with a
+   * non-empty revision body — i.e. we can show the user the source text. */
+  sourceText: {
+    docIri:    string;
+    docLabel:  string | null;
+    sourceUrl: string | null;
+    bodySize:  number;
+  } | null;
+}
+
+function SourceTextBadge({ st }: { st: NonNullable<SerializedClaim["sourceText"]>; }) {
+  const fmt = (n: number) =>
+    n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+  const tip = `${st.docLabel ?? st.docIri} — ${fmt(st.bodySize)} of source text`;
+  const className = `${css.sourceBadge}`;
+  if (st.sourceUrl) {
+    return (
+      <a
+        href={st.sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        title={tip}
+        aria-label={tip}
+      >
+        source
+      </a>
+    );
+  }
+  return (
+    <span className={className} title={tip} aria-label={tip}>
+      source
+    </span>
+  );
 }
