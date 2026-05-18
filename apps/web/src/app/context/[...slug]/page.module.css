@@ -1,0 +1,108 @@
+.page { padding-bottom: var(--ddp-space-16); }
+.wiki { max-width: 1040px; margin: 0 auto; padding: var(--ddp-space-5) var(--ddp-space-6) 0; }
+.article { font-family: var(--ddp-font-sans); color: #202122; font-size: 0.9375rem; line-height: 1.65; }
+
+.title {
+  font-family: "Linux Libertine", "Georgia", "Times", serif;
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.25;
+  margin: 4px 0;
+  border-bottom: 1px solid #a2a9b1;
+  padding-bottom: 4px;
+  color: #000;
+}
+.ctxIri {
+  font-family: var(--ddp-font-mono);
+  font-size: 0.75rem;
+  color: #72777d;
+  word-break: break-all;
+}
+
+.metaStrip {
+  margin-top: var(--ddp-space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.8125rem;
+  color: #54595d;
+  background: #f8f9fa;
+  border-left: 3px solid #0645ad;
+  padding: 8px 12px;
+}
+.metaStrip strong { color: #202122; }
+
+.muted { color: #54595d; font-style: italic; margin-top: var(--ddp-space-3); }
+
+.docBox {
+  margin-top: var(--ddp-space-5);
+  background: #fbfbfb;
+  border: 1px solid #eaecf0;
+  padding: var(--ddp-space-3) var(--ddp-space-4);
+  border-radius: 3px;
+}
+.docHead { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.docTitle {
+  color: #0645ad;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.0625rem;
+}
+.docTitle:hover { text-decoration: underline; }
+.fullTextBadge {
+  background: #14866d; color: #fff; font-size: 0.6875rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 1px 5px; border-radius: 2px;
+}
+.docMeta {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px;
+  font-size: 0.6875rem; color: #54595d;
+}
+.docMime { font-family: var(--ddp-font-mono); color: #72777d; }
+.docSize { color: #14866d; font-variant-numeric: tabular-nums; }
+.docIri {
+  font-family: var(--ddp-font-mono); font-size: 0.625rem; color: #a2a9b1;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.docExcerpt {
+  margin: 10px 0 0 0; padding: 8px 12px;
+  border-left: 3px solid #a2a9b1; background: #fff;
+  font-family: "Linux Libertine", "Georgia", serif;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.factsBox { margin-top: var(--ddp-space-5); }
+.factCount { font-size: 0.8125rem; color: #54595d; font-variant-numeric: tabular-nums; }
+.factTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  margin-top: var(--ddp-space-2);
+}
+.factTable th {
+  text-align: left;
+  font-weight: 600;
+  color: #54595d;
+  border-bottom: 1px solid #a2a9b1;
+  padding: 6px 8px;
+}
+.factTable td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eaecf0;
+  vertical-align: top;
+}
+.colSubject { width: 30%; }
+.colPred {
+  width: 25%;
+  font-family: var(--ddp-font-mono);
+  font-size: 0.75rem;
+  color: #54595d;
+  word-break: break-all;
+}
+.colObject { color: #202122; word-break: break-word; }
+.colObject a, .colSubject a {
+  color: #0645ad;
+  text-decoration: none;
+}
+.colObject a:hover, .colSubject a:hover { text-decoration: underline; }

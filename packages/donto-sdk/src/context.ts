@@ -23,13 +23,13 @@ export function contextLabel(iri: string): string {
 }
 
 export function contextHref(iri: string): string | null {
-  if (iri.startsWith("ctx:research/")) {
-    return `/research/${encodeURIComponent(iri.slice("ctx:research/".length))}`;
-  }
-  if (iri.startsWith("ctx:src/")) {
-    return `/source/${encodeURIComponent(iri.slice("ctx:src/".length))}`;
-  }
-  return null;
+  // Unified /context page handles every ctx: / doc: / donto: kind.
+  // The old /research/<id> and /source/<id> routes still exist for
+  // back-compat (research sessions, uploaded sources) but for
+  // reference click-through we want the same destination regardless
+  // of how the LLM named the bucket.
+  if (!iri) return null;
+  return `/context/${encodeURIComponent(iri)}`;
 }
 
 /** Maturity ladder (PRD §2). Kept here so UI strings live with the domain. */
