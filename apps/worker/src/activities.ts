@@ -66,18 +66,23 @@ export async function runResearchAgent(
   const hostOutputDir = hostMode ? await mkdtemp(join(tmpdir(), "dontopedia-codex-")) : null;
   const hostOutputFile = hostOutputDir ? join(hostOutputDir, "last-message.txt") : null;
 
+  const kind = researchAgentKind();
+  const hostBin =
+    process.env.RESEARCH_AGENT_BIN ??
+    process.env.CODEX_BIN ??
+    process.env.CLAUDE_BIN ??
+    (kind === "opencode" ? "opencode" : "codex");
   const { bin, args } = hostMode
     ? {
-        bin:
-          process.env.RESEARCH_AGENT_BIN ??
-          process.env.CODEX_BIN ??
-          process.env.CLAUDE_BIN ??
-          "codex",
-        args: buildCodexArgs(prompt, hostOutputFile!),
+        bin: hostBin,
+        args:
+          kind === "opencode"
+            ? buildOpencodeArgs(prompt)
+            : buildCodexArgs(prompt, hostOutputFile!),
       }
     : {
         bin: "docker",
-        args: buildDockerArgs(sandbox!, prompt, input.sessionId),
+        args: buildDockerArgs(sandbox!, prompt, input.sessionId, kind),
       };
 
   try {
@@ -163,17 +168,42 @@ function buildCodexArgs(prompt: string, outputFile: string): string[] {
   ];
 }
 
-function buildDockerArgs(image: string, prompt: string, sessionId: string): string[] {
+/** OpenCode invocation: `opencode run <prompt>`. Model selection
+ * is via the auth/config files mounted inside the sandbox, not flags,
+ * so the worker just hands the prompt over and reads the transcript
+ * from stdout. */
+function buildOpencodeArgs(prompt: string): string[] {
+  return ["run", prompt];
+}
+
+/** Which agent CLI is running inside the sandbox / host. Defaults to
+ * "opencode" because the dontopedia-worker now ships an opencode
+ * sandbox; older deployments that still point at the codex image can
+ * set RESEARCH_AGENT_KIND=codex to fall back. */
+function researchAgentKind(): "opencode" | "codex" {
+  const v =
+    process.env.RESEARCH_AGENT_KIND ??
+    process.env.AGENT_KIND ??
+    "opencode";
+  return v.toLowerCase() === "codex" ? "codex" : "opencode";
+}
+
+function buildDockerArgs(
+  image: string,
+  prompt: string,
+  sessionId: string,
+  kind: "opencode" | "codex" = "opencode",
+): string[] {
   const network =
     process.env.RESEARCH_SANDBOX_NETWORK ??
     process.env.CODEX_SANDBOX_NETWORK ??
     process.env.CLAUDE_SANDBOX_NETWORK ??
     "dontopedia_default";
-  const args = [
+  const args: string[] = [
     "run",
     "--rm",
     "--name",
-    `codex-${sessionId}`,
+    `${kind}-${sessionId}`,
     "--network",
     network,
     "--memory",
@@ -182,9 +212,9 @@ function buildDockerArgs(image: string, prompt: string, sessionId: string): stri
     "256",
     "--cap-drop",
     "ALL",
-    // The entrypoint copies auth into the codex user's home and
+    // The entrypoint copies auth into the agent user's home and
     // switches uid, which needs CHOWN / SETUID / SETGID. DAC_OVERRIDE
-    // lets root write into /home/codex without owning it. These four
+    // lets root write into /home/agent without owning it. These four
     // are a tiny surface area compared to the default cap set.
     "--cap-add",
     "CHOWN",
@@ -199,18 +229,40 @@ function buildDockerArgs(image: string, prompt: string, sessionId: string): stri
     "-e",
     `DONTOSRV_URL=${process.env.DONTOSRV_URL ?? "http://dontosrv:7878"}`,
   ];
-  if (process.env.OPENAI_API_KEY) {
-    args.push("-e", `OPENAI_API_KEY=${process.env.OPENAI_API_KEY}`);
+
+  if (kind === "opencode") {
+    // OpenCode reads its OpenRouter (or other-provider) auth from
+    // ~/.local/share/opencode/auth.json. We prefer mounting the
+    // host's file as gold-standard; if absent we hand the API key
+    // over an env var and let the entrypoint synthesise an
+    // auth.json. Default model is openrouter/z-ai/glm-5; override
+    // with OPENCODE_MODEL on the worker.
+    if (process.env.OPENROUTER_API_KEY) {
+      args.push("-e", `OPENROUTER_API_KEY=${process.env.OPENROUTER_API_KEY}`);
+    }
+    if (process.env.OPENCODE_MODEL) {
+      args.push("-e", `OPENCODE_MODEL=${process.env.OPENCODE_MODEL}`);
+    }
+    const credsHome =
+      process.env.RESEARCH_AGENT_CREDS_HOME ??
+      process.env.OPENCODE_CREDS_HOME ??
+      "/root";
+    // Both files are optional. Mount best-effort — docker tolerates
+    // -v of a non-existent path by creating an empty directory, so
+    // the entrypoint falls through to the env-var path naturally.
+    args.push("-v", `${credsHome}/.local/share/opencode/auth.json:/creds/auth.json:ro`);
+    args.push("-v", `${credsHome}/.config/opencode/opencode.jsonc:/creds/opencode.jsonc:ro`);
+  } else {
+    if (process.env.OPENAI_API_KEY) {
+      args.push("-e", `OPENAI_API_KEY=${process.env.OPENAI_API_KEY}`);
+    }
+    const credsHome =
+      process.env.RESEARCH_AGENT_CREDS_HOME ??
+      process.env.CODEX_CREDS_HOME ??
+      process.env.CLAUDE_CREDS_HOME ??
+      "/root";
+    args.push("-v", `${credsHome}/.codex:/creds/.codex:ro`);
   }
-  // Mount the host's Codex credential directory so sessions inherit
-  // whatever `codex login` set up on the droplet. The sandbox entrypoint
-  // copies only the small auth/config files it needs into a writable $HOME.
-  const credsHome =
-    process.env.RESEARCH_AGENT_CREDS_HOME ??
-    process.env.CODEX_CREDS_HOME ??
-    process.env.CLAUDE_CREDS_HOME ??
-    "/root";
-  args.push("-v", `${credsHome}/.codex:/creds/.codex:ro`);
   args.push(image, prompt);
   return args;
 }
