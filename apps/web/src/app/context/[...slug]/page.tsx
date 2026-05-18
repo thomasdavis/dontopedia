@@ -48,6 +48,18 @@ export default async function ContextPage({
   if (!ctxInfo && factRows.length === 0) notFound();
 
   const doc = ctxInfo?.documents?.[0] ?? null;
+
+  // Pull the full revision body so the page can render the source
+  // document in full instead of only the 240-char excerpt that
+  // /sources/lookup returns. Falls back to the excerpt silently
+  // when no body is attached.
+  let fullBody: string | null = null;
+  if (doc?.revision_id && doc.has_body) {
+    try {
+      const rb = await c.revisionBody(doc.revision_id);
+      fullBody = rb.body ?? null;
+    } catch { /* non-fatal */ }
+  }
   const kind = classifyContext(ctxIri);
 
   // Group facts by subject so the long fact list is browsable.
@@ -106,9 +118,11 @@ export default async function ContextPage({
                 {doc.has_body && <span className={css.docSize}>{fmtBytes(doc.body_size)}</span>}
                 <code className={css.docIri}>{doc.document_iri}</code>
               </div>
-              {doc.body_excerpt && (
+              {fullBody ? (
+                <blockquote className={css.docBody}>{fullBody}</blockquote>
+              ) : doc.body_excerpt ? (
                 <blockquote className={css.docExcerpt}>{doc.body_excerpt}…</blockquote>
-              )}
+              ) : null}
             </section>
           ) : (
             <p className={css.muted}>
