@@ -35,7 +35,7 @@ export default function TryPage() {
   const router = useRouter();
   const [text, setText] = useState(SAMPLE);
   const [context, setContext] = useState(defaultContext());
-  const [model, setModel] = useState("grok");
+  const [model, setModel] = useState("glm");
   const [mode, setMode] = useState<"fast" | "exhaustive">("exhaustive");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +121,8 @@ export default function TryPage() {
           </Field>
           <Field label="Model">
             <select value={model} onChange={(e) => setModel(e.target.value)} disabled={submitting} style={inputStyle}>
-              <option value="grok">grok (Grok 4.3, ~$0.005)</option>
+              <option value="glm">glm (GLM-5, $0.60/M in, $1.92/M out)</option>
+            <option value="grok">grok (alias, routes to GLM-5)</option>
               <option value="sonnet">sonnet (Claude Sonnet 4.6)</option>
               <option value="mistral">mistral (Mistral Large)</option>
             </select>
