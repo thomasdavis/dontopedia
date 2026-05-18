@@ -38,10 +38,12 @@ export default async function ContextPage({
   const ctxIri = decodeSlug(slug);
   const c = dpClient();
 
-  const [src, factsRes] = await Promise.all([
+  const [src, factsRes, spansRes] = await Promise.all([
     c.sourcesLookup([ctxIri]).catch(() => ({ sources: [] })),
     c.contextFacts(ctxIri, 500).catch(() => ({ ctx: ctxIri, facts: [] })),
+    c.contextSpans(ctxIri, 2000).catch(() => ({ ctx: ctxIri, spans: [] })),
   ]);
+  const spans = (spansRes.spans ?? []).filter((s) => s.revision_id === (src.sources?.[0]?.documents?.[0]?.revision_id ?? ""));
   const ctxInfo = src.sources?.[0] ?? null;
   const factRows = factsRes.facts ?? [];
 
@@ -119,7 +121,11 @@ export default async function ContextPage({
                 <code className={css.docIri}>{doc.document_iri}</code>
               </div>
               {fullBody ? (
-                <blockquote className={css.docBody}>{fullBody}</blockquote>
+                <blockquote className={css.docBody}>
+                  {spans.length > 0
+                    ? renderHighlighted(fullBody, spans)
+                    : fullBody}
+                </blockquote>
               ) : doc.body_excerpt ? (
                 <blockquote className={css.docExcerpt}>{doc.body_excerpt}…</blockquote>
               ) : null}
@@ -180,4 +186,43 @@ export default async function ContextPage({
       </article>
     </main>
   );
+}
+
+/** Render the source text with <mark> wrappers around every span. Overlapping
+ *  spans collapse (the union range is one mark). Each mark gets a tooltip
+ *  showing the citing predicate(s). */
+function renderHighlighted(
+  body: string,
+  spans: { start: number; end: number; predicate: string }[],
+): React.ReactNode {
+  if (spans.length === 0) return body;
+  // Merge overlapping ranges; collect predicate labels per range.
+  const sorted = [...spans].sort((a, b) => a.start - b.start || a.end - b.end);
+  type Range = { start: number; end: number; preds: Set<string> };
+  const merged: Range[] = [];
+  for (const s of sorted) {
+    if (s.start >= body.length) continue;
+    const end = Math.min(s.end, body.length);
+    const last = merged[merged.length - 1];
+    if (last && s.start <= last.end) {
+      last.end = Math.max(last.end, end);
+      last.preds.add(s.predicate);
+    } else {
+      merged.push({ start: s.start, end, preds: new Set([s.predicate]) });
+    }
+  }
+  const out: React.ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+  for (const r of merged) {
+    if (r.start > cursor) out.push(body.slice(cursor, r.start));
+    out.push(
+      <mark key={key++} title={[...r.preds].join(", ")}>
+        {body.slice(r.start, r.end)}
+      </mark>,
+    );
+    cursor = r.end;
+  }
+  if (cursor < body.length) out.push(body.slice(cursor));
+  return out;
 }

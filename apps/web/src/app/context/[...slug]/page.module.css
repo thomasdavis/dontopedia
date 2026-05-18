@@ -122,3 +122,13 @@
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* Anchored substrings inside the source document body. <mark> default
+ * yellow is fine; subdue it a bit and add a hover tooltip via the
+ * title attribute. */
+.docBody mark {
+  background: #fff8c5;
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: help;
+}
