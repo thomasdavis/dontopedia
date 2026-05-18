@@ -173,7 +173,12 @@ function buildCodexArgs(prompt: string, outputFile: string): string[] {
  * so the worker just hands the prompt over and reads the transcript
  * from stdout. */
 function buildOpencodeArgs(prompt: string): string[] {
-  return ["run", prompt];
+  // --format json gives one JSON event per line on stdout (step_start,
+  // text deltas, tool calls, …). Combined with `docker run -t` (TTY)
+  // which the buildDockerArgs path requests for opencode kind, the
+  // events flush to stdout in real time so the worker can stream
+  // progress AND grab the final assistant message.
+  return ["run", "--format", "json", prompt];
 }
 
 /** Which agent CLI is running inside the sandbox / host. Defaults to
@@ -202,6 +207,12 @@ function buildDockerArgs(
   const args: string[] = [
     "run",
     "--rm",
+    // opencode's default output stalls on a non-TTY stdout (the build
+    // mode session header prints, but the actual response is buffered
+    // and never flushed before the container exits). Allocating a
+    // pseudo-TTY for opencode sessions flushes correctly; codex
+    // doesn't need it. Harmless either way.
+    ...(kind === "opencode" ? ["-t"] : []),
     "--name",
     `${kind}-${sessionId}`,
     "--network",
