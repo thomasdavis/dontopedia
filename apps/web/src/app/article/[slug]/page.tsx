@@ -25,6 +25,7 @@ import { ReferencesList, type RefRow } from "@/components/ReferencesList";
 import { SectionFilter } from "@/components/SectionFilter";
 import { TocHighlighter } from "@/components/TocHighlighter";
 import { CitationPopovers, type CitationInfo } from "@/components/CitationPopovers";
+import { InboundFacts, type InboundRowView } from "@/components/InboundFacts";
 import { UploadButton } from "@/components/UploadButton";
 import {
   RetractedToggleProvider,
@@ -352,6 +353,7 @@ export default async function ArticlePage({
   // Per-statement evidence: statement_id -> first document linked via
   // donto_evidence_link. Used to render a "source text" badge on facts.
   const statementEvidence = new Map<string, import("@donto/client").StatementEvidence>();
+  const inboundRows: InboundRowView[] = [];
   try {
     const srcCtxs = [...refs.keys()].filter(
       (ctx) => ctx.startsWith("ctx:src/") || ctx.startsWith("ctx:src-"),
@@ -388,6 +390,21 @@ export default async function ArticlePage({
         }
       } catch { /* non-fatal */ }
     }
+
+    // Inbound facts — statements elsewhere that name this subject as their
+    // object_iri. This is where inverse relationships hide: e.g.
+    // "ex:rosie motherOf ex:edgar-davis" only shows up here.
+    try {
+      const inb = await dpClient().inbound(iri, 200);
+      for (const r of inb.inbound) {
+        inboundRows.push({
+          subject:     r.subject,
+          predicate:   r.predicate,
+          context:     r.context,
+          statementId: r.statement_id,
+        });
+      }
+    } catch { /* non-fatal */ }
     await Promise.all(
       srcCtxs.map(async (c) => {
         try {
@@ -616,10 +633,19 @@ export default async function ArticlePage({
                       </a>
                     </li>
                   ))}
+                  {inboundRows.length > 0 && (
+                    <li data-toc-key="inbound mentions">
+                      <a href="#inbound">
+                        <span className={css.tocNum}>{extraTocStart}</span>
+                        <span className={css.tocLabel}>Inbound mentions</span>
+                        <span className={css.tocCount}>{inboundRows.length}</span>
+                      </a>
+                    </li>
+                  )}
                   {otherRows.length > 0 && (
                     <li>
                       <a href="#other-facts">
-                        <span className={css.tocNum}>{extraTocStart}</span>
+                        <span className={css.tocNum}>{extraTocStart + (inboundRows.length > 0 ? 1 : 0)}</span>
                         <span className={css.tocLabel}>Other facts</span>
                         <span className={css.tocCount}>{otherRows.length}</span>
                       </a>
@@ -627,14 +653,14 @@ export default async function ArticlePage({
                   )}
                   <li>
                     <a href="#timeline">
-                      <span className={css.tocNum}>{extraTocStart + (otherRows.length > 0 ? 1 : 0)}</span>
+                      <span className={css.tocNum}>{extraTocStart + (inboundRows.length > 0 ? 1 : 0) + (otherRows.length > 0 ? 1 : 0)}</span>
                       <span className={css.tocLabel}>Timeline</span>
                     </a>
                   </li>
                   {refs.size > 0 && (
                     <li>
                       <a href="#references">
-                        <span className={css.tocNum}>{extraTocStart + (otherRows.length > 0 ? 2 : 1)}</span>
+                        <span className={css.tocNum}>{extraTocStart + (inboundRows.length > 0 ? 1 : 0) + (otherRows.length > 0 ? 2 : 1)}</span>
                         <span className={css.tocLabel}>References</span>
                         <span className={css.tocCount}>{refs.size}</span>
                       </a>
@@ -643,7 +669,7 @@ export default async function ArticlePage({
                   {hasSeeAlso && (
                     <li>
                       <a href="#see-also">
-                        <span className={css.tocNum}>{extraTocStart + (otherRows.length > 0 ? 3 : 2)}</span>
+                        <span className={css.tocNum}>{extraTocStart + (inboundRows.length > 0 ? 1 : 0) + (otherRows.length > 0 ? 3 : 2)}</span>
                         <span className={css.tocLabel}>See also</span>
                         <span className={css.tocCount}>{seeAlsoEntries.length}</span>
                       </a>
@@ -673,6 +699,21 @@ export default async function ArticlePage({
                     </PredicateSection>
                   );
                 })}
+
+                {inboundRows.length > 0 && (
+                  <PredicateSection
+                    id="inbound"
+                    title={`Inbound mentions (${inboundRows.length.toLocaleString()})`}
+                  >
+                    <p className={css.sectionNote}>
+                      Other subjects in dontopedia point AT this entity as a
+                      value. These are inverse relationships — e.g. "X
+                      motherOf this subject" — and answer questions the
+                      forward facts can't. Grouped by predicate.
+                    </p>
+                    <InboundFacts rows={inboundRows} />
+                  </PredicateSection>
+                )}
 
                 {otherRows.length > 0 && (
                   <PredicateSection
